@@ -3,6 +3,7 @@
 #include "../generators/graph/range_utility.h"
 #include "../generators/graph/voxel_generator_graph.h"
 #include "../meshers/blocky/voxel_blocky_library.h"
+#include "../meshers/cubes/voxel_mesher_cubes.h"
 #include "../storage/voxel_buffer_gd.h"
 #include "../storage/voxel_data_map.h"
 #include "../storage/voxel_metadata_variant.h"
@@ -18,6 +19,7 @@
 #include "../util/island_finder.h"
 #include "../util/math/box3i.h"
 #include "../util/noise/fast_noise_lite/fast_noise_lite.h"
+#include "../util/string_funcs.h"
 #include "test_octree.h"
 #include "testing.h"
 
@@ -350,7 +352,7 @@ void test_voxel_graph_generator_default_graph_compilation() {
 	Ref<VoxelGeneratorGraph> generator;
 	generator.instantiate();
 	generator->load_plane_preset();
-	VoxelGraphRuntime::CompilationResult result = generator->compile();
+	VoxelGraphRuntime::CompilationResult result = generator->compile(false);
 	ZYLANN_TEST_ASSERT_MSG(
 			result.success, String("Failed to compile graph: {0}: {1}").format(varray(result.node_id, result.message)));
 }
@@ -378,7 +380,7 @@ void test_voxel_graph_generator_expressions() {
 		generator->add_connection(in_z, 0, n_expression, 2);
 		generator->add_connection(n_expression, 0, out_sdf, 0);
 
-		VoxelGraphRuntime::CompilationResult result = generator->compile();
+		VoxelGraphRuntime::CompilationResult result = generator->compile(false);
 		ZYLANN_TEST_ASSERT_MSG(result.success,
 				String("Failed to compile graph: {0}: {1}").format(varray(result.node_id, result.message)));
 	}
@@ -432,7 +434,7 @@ void test_voxel_graph_generator_expressions() {
 		generator->add_connection(n_plane, 0, n_expr, 2);
 		generator->add_connection(n_expr, 0, out_sdf, 0);
 
-		VoxelGraphRuntime::CompilationResult result = generator->compile();
+		VoxelGraphRuntime::CompilationResult result = generator->compile(true);
 		ZYLANN_TEST_ASSERT_MSG(result.success,
 				String("Failed to compile graph: {0}: {1}").format(varray(result.node_id, result.message)));
 
@@ -491,7 +493,7 @@ void test_voxel_graph_generator_texturing() {
 	generator->add_connection(n_sub1, 0, out_weight0, 0);
 	generator->add_connection(n_clamp, 0, out_weight1, 0);
 
-	VoxelGraphRuntime::CompilationResult compilation_result = generator->compile();
+	VoxelGraphRuntime::CompilationResult compilation_result = generator->compile(false);
 	ZYLANN_TEST_ASSERT_MSG(compilation_result.success,
 			String("Failed to compile graph: {0}: {1}")
 					.format(varray(compilation_result.node_id, compilation_result.message)));
@@ -1138,17 +1140,37 @@ void test_block_serializer() {
 	voxel_buffer.fill_area(43, Vector3i(2, 3, 4), Vector3i(6, 6, 6), 0);
 	voxel_buffer.fill_area(44, Vector3i(1, 2, 3), Vector3i(5, 5, 5), 1);
 
-	// Serialize
-	BlockSerializer::SerializeResult result = BlockSerializer::serialize_and_compress(voxel_buffer);
-	ZYLANN_TEST_ASSERT(result.success);
-	std::vector<uint8_t> data = result.data;
+	{
+		// Serialize without compression wrapper
+		BlockSerializer::SerializeResult result = BlockSerializer::serialize(voxel_buffer);
+		ZYLANN_TEST_ASSERT(result.success);
+		std::vector<uint8_t> data = result.data;
 
-	// Deserialize
-	VoxelBufferInternal deserialized_voxel_buffer;
-	ZYLANN_TEST_ASSERT(BlockSerializer::decompress_and_deserialize(to_span_const(data), deserialized_voxel_buffer));
+		ZYLANN_TEST_ASSERT(data.size() > 0);
+		ZYLANN_TEST_ASSERT(data[0] == BlockSerializer::BLOCK_FORMAT_VERSION);
 
-	// Must be equal
-	ZYLANN_TEST_ASSERT(voxel_buffer.equals(deserialized_voxel_buffer));
+		// Deserialize
+		VoxelBufferInternal deserialized_voxel_buffer;
+		ZYLANN_TEST_ASSERT(BlockSerializer::deserialize(to_span_const(data), deserialized_voxel_buffer));
+
+		// Must be equal
+		ZYLANN_TEST_ASSERT(voxel_buffer.equals(deserialized_voxel_buffer));
+	}
+	{
+		// Serialize
+		BlockSerializer::SerializeResult result = BlockSerializer::serialize_and_compress(voxel_buffer);
+		ZYLANN_TEST_ASSERT(result.success);
+		std::vector<uint8_t> data = result.data;
+
+		ZYLANN_TEST_ASSERT(data.size() > 0);
+
+		// Deserialize
+		VoxelBufferInternal deserialized_voxel_buffer;
+		ZYLANN_TEST_ASSERT(BlockSerializer::decompress_and_deserialize(to_span_const(data), deserialized_voxel_buffer));
+
+		// Must be equal
+		ZYLANN_TEST_ASSERT(voxel_buffer.equals(deserialized_voxel_buffer));
+	}
 }
 
 void test_block_serializer_stream_peer() {
@@ -2031,6 +2053,52 @@ void test_voxel_buffer_metadata_gd() {
 	}
 }
 
+void test_voxel_mesher_cubes() {
+	VoxelBufferInternal vb;
+	vb.create(8, 8, 8);
+	vb.set_channel_depth(VoxelBufferInternal::CHANNEL_COLOR, VoxelBufferInternal::DEPTH_16_BIT);
+	vb.set_voxel(Color8(0, 255, 0, 255).to_u16(), Vector3i(3, 4, 4), VoxelBufferInternal::CHANNEL_COLOR);
+	vb.set_voxel(Color8(0, 255, 0, 255).to_u16(), Vector3i(4, 4, 4), VoxelBufferInternal::CHANNEL_COLOR);
+	vb.set_voxel(Color8(0, 0, 255, 128).to_u16(), Vector3i(5, 4, 4), VoxelBufferInternal::CHANNEL_COLOR);
+
+	Ref<VoxelMesherCubes> mesher;
+	mesher.instantiate();
+	mesher->set_color_mode(VoxelMesherCubes::COLOR_RAW);
+
+	VoxelMesher::Input input{ vb, nullptr, nullptr, Vector3i(), 0 };
+	VoxelMesher::Output output;
+	mesher->build(output, input);
+
+	const unsigned int opaque_surface_index = VoxelMesherCubes::MATERIAL_OPAQUE;
+	const unsigned int transparent_surface_index = VoxelMesherCubes::MATERIAL_TRANSPARENT;
+
+	ZYLANN_TEST_ASSERT(output.surfaces.size() == 2);
+	ZYLANN_TEST_ASSERT(output.surfaces[0].size() > 0);
+	ZYLANN_TEST_ASSERT(output.surfaces[1].size() > 0);
+
+	const PackedVector3Array surface0_vertices = output.surfaces[opaque_surface_index][Mesh::ARRAY_VERTEX];
+	const unsigned int surface0_vertices_count = surface0_vertices.size();
+
+	const PackedVector3Array surface1_vertices = output.surfaces[transparent_surface_index][Mesh::ARRAY_VERTEX];
+	const unsigned int surface1_vertices_count = surface1_vertices.size();
+
+	// println("Surface0:");
+	// for (int i = 0; i < surface0_vertices.size(); ++i) {
+	// 	println(format("v[{}]: {}", i, surface0_vertices[i]));
+	// }
+	// println("Surface1:");
+	// for (int i = 0; i < surface1_vertices.size(); ++i) {
+	// 	println(format("v[{}]: {}", i, surface1_vertices[i]));
+	// }
+
+	// Greedy meshing with two cubes of the same color next to each other means it will be a single box.
+	// Each side has different normals, so vertices have to be repeated. 6 sides * 4 vertices = 24.
+	ZYLANN_TEST_ASSERT(surface0_vertices_count == 24);
+	// The transparent cube has less vertices because one of its faces overlaps with a neighbor solid face,
+	// so it is culled
+	ZYLANN_TEST_ASSERT(surface1_vertices_count == 20);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define VOXEL_TEST(fname)                                                                                              \
@@ -2070,6 +2138,7 @@ void run_voxel_tests() {
 	VOXEL_TEST(test_expression_parser);
 	VOXEL_TEST(test_voxel_buffer_metadata);
 	VOXEL_TEST(test_voxel_buffer_metadata_gd);
+	VOXEL_TEST(test_voxel_mesher_cubes);
 
 	print_line("------------ Voxel tests end -------------");
 }
