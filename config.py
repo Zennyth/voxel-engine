@@ -56,6 +56,7 @@ def get_doc_classes():
         "VoxelGeneratorHeightmap",
         "VoxelGeneratorImage",
         "VoxelGeneratorNoise2D",
+        "VoxelGeneratorWorld",
         "VoxelGeneratorNoise",
         "VoxelGeneratorGraph",
         "VoxelGeneratorScript",

@@ -18,6 +18,7 @@ VoxelGeneratorHeightmap
 VoxelGeneratorImage
 VoxelGeneratorNoise
 VoxelGeneratorNoise2D
+VoxelGeneratorWorld
 VoxelGeneratorScript
 VoxelGeneratorWaves
 VoxelInstanceComponent

@@ -45,6 +45,7 @@ nav:
     - api/VoxelGeneratorImage.md
     - api/VoxelGeneratorNoise.md
     - api/VoxelGeneratorNoise2D.md
+    - api/VoxelGeneratorWorld.md
     - api/VoxelGeneratorScript.md
     - api/VoxelGeneratorWaves.md
     - api/VoxelInstanceGenerator.md
