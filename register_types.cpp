@@ -42,6 +42,8 @@
 #include "util/noise/fast_noise_lite/fast_noise_lite_gradient.h"
 #include "util/string_funcs.h"
 #include "util/tasks/godot/threaded_task_gd.h"
+#include "util/world/biome.h"
+#include "util/world/height_map.h"
 
 #ifdef VOXEL_ENABLE_FAST_NOISE_2
 #include "util/noise/fast_noise_2.h"
@@ -139,6 +141,9 @@ void register_voxel_types() {
 	ClassDB::register_class<ZN_FastNoiseLite>();
 	ClassDB::register_class<ZN_FastNoiseLiteGradient>();
 	ClassDB::register_class<ZN_ThreadedTask>();
+
+	ClassDB::register_class<Biome>();
+	ClassDB::register_class<HeightMap>();
 	// See SCsub
 #ifdef VOXEL_ENABLE_FAST_NOISE_2
 	ClassDB::register_class<FastNoise2>();

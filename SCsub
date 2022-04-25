@@ -43,6 +43,8 @@ voxel_files = [
 	"util/tasks/*.cpp",
 	"util/tasks/godot/*.cpp",
 
+	"util/world/*.cpp",
+
 	"terrain/*.cpp",
 	"terrain/instancing/*.cpp",
 	"terrain/fixed_lod/*.cpp",

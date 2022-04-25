@@ -75,6 +75,9 @@ def get_doc_classes():
         "ZN_FastNoiseLiteGradient",
         "FastNoise2",
 
+        "Biome",
+        "HeightMap",
+
         "VoxelMesher",
         "VoxelMesherBlocky",
         "VoxelMesherTransvoxel",
