@@ -44,6 +44,7 @@
 #include "util/tasks/godot/threaded_task_gd.h"
 #include "util/world/biome.h"
 #include "util/world/height_map.h"
+#include "util/world/border.h"
 
 #ifdef VOXEL_ENABLE_FAST_NOISE_2
 #include "util/noise/fast_noise_2.h"

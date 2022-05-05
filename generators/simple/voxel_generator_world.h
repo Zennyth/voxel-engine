@@ -2,7 +2,10 @@
 #define VOXEL_GENERATOR_WORLD_H
 
 #include "voxel_generator_heightmap.h"
+#include <scene/resources/curve.h>
 #include <modules/noise/fastnoise_lite.h>
+#include <modules/voxel/util/world/biome.h>
+#include <modules/voxel/util/world/border.h>
 
 class Curve;
 class Noise;
@@ -16,38 +19,55 @@ public:
 	VoxelGeneratorWorld();
 	~VoxelGeneratorWorld();
 
-	void set_continentalness_curve(Ref<Curve> curve);
-	Ref<Curve> get_continentalness_curve() const;
-	void set_peaks_and_valleys_curve(Ref<Curve> curve);
-	Ref<Curve> get_peaks_and_valleys_curve() const;
-	void set_erosion_curve(Ref<Curve> curve);
-	Ref<Curve> get_erosion_curve() const;
+	void set_temperature_noise(Ref<FastNoiseLite> temperature_noise);
+	Ref<FastNoiseLite> get_temperature_noise() const;
+	void set_moisture_noise(Ref<FastNoiseLite> moisture_noise);
+	Ref<FastNoiseLite> get_moisture_noise() const;
+	void set_continentalness_noise(Ref<FastNoiseLite> continentalness_noise);
+	Ref<FastNoiseLite> get_continentalness_noise() const;
+	void set_peaks_and_valleys_noise(Ref<FastNoiseLite> peaks_and_valleys_noise);
+	Ref<FastNoiseLite> get_peaks_and_valleys_noise() const;
+	void set_erosion_noise(Ref<FastNoiseLite> erosion_noise);
+	Ref<FastNoiseLite> get_erosion_noise() const;
+
+
+	void set_biomes(Array biomes);
+	Array get_biomes() const;
 
 	VoxelBufferInternal::ChannelId VoxelGeneratorWorld::get_channel() const;
 
 	Result generate_block(VoxelGenerator::VoxelQueryData &input) override;
 
 private:
-	void _on_continentalness_curve_changed();
-	void _on_peaks_and_valleys_curve_changed();
-	void _on_erosion_curve_changed();
+	Ref<Biome> get_biome_by(float temperature, float moisture);
+
+	void _on_temperature_noise_changed();
+	void _on_moisture_noise_changed();
+	void _on_continentalness_noise_changed();
+	void _on_peaks_and_valleys_noise_changed();
+	void _on_erosion_noise_changed();
 	static void _bind_methods();
 
 private:
-	FastNoiseLite continentalness_noise;
-	FastNoiseLite peaks_and_valleys_noise;
-	FastNoiseLite erosion_noise;
-
 	VoxelBufferInternal::ChannelId channel = VoxelBufferInternal::CHANNEL_COLOR;
 
-	Ref<Curve> _continentalness_curve;
-	Ref<Curve> _peaks_and_valleys_curve;
-	Ref<Curve> _erosion_curve;
+	Array _biomes;
+	CellNoise border_delimeter;
+
+	// biome selection
+	Ref<FastNoiseLite> _temperature_noise;
+	Ref<FastNoiseLite> _moisture_noise;
+	// terrain shape
+	Ref<FastNoiseLite> _continentalness_noise;
+	Ref<FastNoiseLite> _peaks_and_valleys_noise;
+	Ref<FastNoiseLite> _erosion_noise;
 
 	struct Parameters {
-		Ref<Curve> continentalness_curve;
-		Ref<Curve> peaks_and_valleys_curve;
-		Ref<Curve> erosion_curve;
+		Ref<FastNoiseLite> temperature_noise;
+		Ref<FastNoiseLite> moisture_noise;
+		Ref<FastNoiseLite> continentalness_noise;
+		Ref<FastNoiseLite> peaks_and_valleys_noise;
+		Ref<FastNoiseLite> erosion_noise;
 	};
 
 	Parameters _parameters;

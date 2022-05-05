@@ -13,6 +13,9 @@ class HeightMap : public Resource {
 public:
 	HeightMap();
 
+	real_t get_height_at(real_t noise);
+
+
     void set_weight(float weight);
 	float get_weight() const;
 

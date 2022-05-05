@@ -8,6 +8,11 @@ namespace zylann {
 HeightMap::HeightMap() {
 }
 
+real_t HeightMap::get_height_at(real_t noise) {
+	return _curve.ptr()->interpolate_baked(noise) * _weight;
+}
+
+
 void HeightMap::set_curve(Ref<Curve> curve) {
 	if (_curve == curve) {
 		return;
