@@ -266,7 +266,7 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 
 			float h = 0;
 
-			if (cell_noise.under_threshold.size() > 10) {
+			if (cell_noise.under_threshold.size() > 1) {
 				for (PointResult const &biome_center : cell_noise.under_threshold) {
 					Vector2 closest_biome_center = biome_center.location;
 					// biome selection

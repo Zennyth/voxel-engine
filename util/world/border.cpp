@@ -6,7 +6,7 @@ CellNoise::CellNoise() {}
 
 ClosestPointsResult CellNoise::get_closest_result(Vector2 location) {
 	ClosestPointsResult result;
-	float total_distance = 0;
+	float total_weight = 0;
 
 	Vector2 index = get_grid_index(location);
 	List<Vector2> neighboors = get_neighboors(index);
@@ -20,25 +20,27 @@ ClosestPointsResult CellNoise::get_closest_result(Vector2 location) {
 		List<Vector2> points = world_grid[cell_index];
 		for (const Vector2 &point : points) {
 			float distance = get_distance(location, point);
+			float normalzed_distance = sqrt(distance);
 
-			if (distance < result.closest.distance) {
-				result.closest = PointResult(cell_index, point, distance, 1.0);
+			if (normalzed_distance < result.closest.distance) {
+				result.closest = PointResult(cell_index, point, normalzed_distance, 1.0);
 			}
 
 			if (distance < border_threshold) {
-				result.under_threshold.push_back(PointResult(cell_index, point, distance, 1.0));
-				total_distance += distance;
+				PointResult res = PointResult(cell_index, point, normalzed_distance, pow(border_threshold - distance, 2.0));
+				result.under_threshold.push_back(res);
+				total_weight += res.weight; 
 			}
 		}
 	}
 
 	if (result.under_threshold.size() > 1) {
-		float total_weight = 0;
+		// float total_weight = 0;
 
-		for (PointResult &point : result.under_threshold) {
-			point.weight = total_distance / point.distance;
-			total_weight += point.weight;
-		}
+		// for (PointResult &point : result.under_threshold) {
+		// 	point.weight = total_distance / point.distance;
+		// 	total_weight += point.weight;
+		// }
 
 		for (PointResult &point : result.under_threshold) {
 			point.weight /= total_weight;
@@ -65,7 +67,7 @@ List<Vector2> CellNoise::get_neighboors(Vector2 index) {
 }
 
 float CellNoise::get_distance(Vector2 point_a, Vector2 point_b) {
-	return sqrt(pow(point_a.x - point_b.x, 2.0) + pow(point_a.y - point_b.y, 2.0));
+	return pow(point_a.x - point_b.x, 2.0) + pow(point_a.y - point_b.y, 2.0);
 }
 
 void CellNoise::generate_points(Vector2 index) {

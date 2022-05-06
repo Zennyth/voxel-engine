@@ -44,8 +44,8 @@ public:
 
 private:
 	Map<Vector2, List<Vector2>> world_grid = {};
-	int scale = 100;
-	int border_threshold = 150;
+	int scale = 1000;
+	int border_threshold = 1000000;
 
 	Vector2 get_grid_index(Vector2 location);
 	List<Vector2> get_neighboors(Vector2 index);
