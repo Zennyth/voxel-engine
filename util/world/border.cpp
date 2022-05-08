@@ -35,13 +35,6 @@ ClosestPointsResult CellNoise::get_closest_result(Vector2 location) {
 	}
 
 	if (result.under_threshold.size() > 1) {
-		// float total_weight = 0;
-
-		// for (PointResult &point : result.under_threshold) {
-		// 	point.weight = total_distance / point.distance;
-		// 	total_weight += point.weight;
-		// }
-
 		for (PointResult &point : result.under_threshold) {
 			point.weight /= total_weight;
 		}

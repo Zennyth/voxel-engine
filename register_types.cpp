@@ -148,8 +148,10 @@ void initialize_voxel_module(ModuleInitializationLevel p_level) {
 		ClassDB::register_class<ZN_ThreadedTask>();
 		// See SCsub
 
+		// Customs
 		ClassDB::register_class<Biome>();
 		ClassDB::register_class<HeightMap>();
+		ClassDB::register_class<VoxelGeneratorWorld>();
 #ifdef VOXEL_ENABLE_FAST_NOISE_2
 		ClassDB::register_class<FastNoise2>();
 #endif
