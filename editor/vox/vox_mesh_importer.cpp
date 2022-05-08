@@ -5,6 +5,7 @@
 #include "../../storage/voxel_memory_pool.h"
 #include "../../streams/vox_data.h"
 #include "../../util/macros.h"
+#include "../../util/math/conv.h"
 #include "../../util/memory.h"
 #include "../../util/profiling.h"
 #include "vox_import_funcs.h"
@@ -94,7 +95,7 @@ Error for_each_model_instance_in_scene_graph(const Data &data, int node_id, Tran
 			const ShapeNode *vox_shape_node = reinterpret_cast<const ShapeNode *>(vox_node);
 			ForEachModelInstanceArgs args;
 			args.model = &data.get_model(vox_shape_node->model_id);
-			args.position = Vector3iUtil::from_rounded(transform.origin);
+			args.position = math::round_to_int(transform.origin);
 			args.basis = transform.basis;
 			f(args);
 		} break;
@@ -151,9 +152,9 @@ void extract_model_instances(const Data &vox_data, std::vector<ModelInstance> &o
 			src_color_indices = to_span_const(model.color_indexes);
 		} else {
 			IntBasis basis;
-			basis.x = Vector3iUtil::from_cast(args.basis.get_axis(Vector3::AXIS_X));
-			basis.y = Vector3iUtil::from_cast(args.basis.get_axis(Vector3::AXIS_Y));
-			basis.z = Vector3iUtil::from_cast(args.basis.get_axis(Vector3::AXIS_Z));
+			basis.x = to_vec3i(args.basis.get_column(Vector3::AXIS_X));
+			basis.y = to_vec3i(args.basis.get_column(Vector3::AXIS_Y));
+			basis.z = to_vec3i(args.basis.get_column(Vector3::AXIS_Z));
 			temp_voxels.resize(model.color_indexes.size());
 			dst_size =
 					transform_3d_array_zxy(to_span_const(model.color_indexes), to_span(temp_voxels), model.size, basis);

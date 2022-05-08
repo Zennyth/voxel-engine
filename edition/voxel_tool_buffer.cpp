@@ -1,5 +1,6 @@
 #include "voxel_tool_buffer.h"
 #include "../storage/voxel_buffer_gd.h"
+#include "../util/math/conv.h"
 #include "../util/profiling.h"
 #include "funcs.h"
 
@@ -26,7 +27,7 @@ void VoxelToolBuffer::do_sphere(Vector3 center, float radius) {
 
 	ZN_PROFILE_SCOPE();
 
-	Box3i box(Vector3iUtil::from_floored(center) - Vector3iUtil::create(Math::floor(radius)),
+	Box3i box(math::floor_to_int(center) - Vector3iUtil::create(Math::floor(radius)),
 			Vector3iUtil::create(Math::ceil(radius) * 2));
 	box.clip(Box3i(Vector3i(), _buffer->get_buffer().get_size()));
 

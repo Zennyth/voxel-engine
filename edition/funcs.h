@@ -3,6 +3,9 @@
 
 #include "../storage/funcs.h"
 #include "../util/fixed_array.h"
+#include "../util/math/sdf.h"
+#include "../util/math/vector3.h"
+#include "../util/math/vector3f.h"
 
 namespace zylann::voxel {
 
@@ -108,6 +111,103 @@ inline void blend_texture_packed_u16(
 	}
 }
 
+// Interpolates values from a 3D grid at a given position, using trilinear interpolation.
+// If the position is outside the grid, values are clamped.
+inline float interpolate_trilinear(Span<const float> grid, const Vector3i res, const Vector3f pos) {
+	const Vector3f pfi = math::floor(pos - Vector3f(0.5f));
+	// TODO Clamp pf too somehow?
+	const Vector3f pf = pos - pfi;
+	const Vector3i max_pos = math::max(res - Vector3i(2, 2, 2), Vector3i());
+	const Vector3i pi = math::clamp(Vector3i(pfi.x, pfi.y, pfi.z), Vector3i(), max_pos);
+
+	const unsigned int n010 = 1;
+	const unsigned int n100 = res.y;
+	const unsigned int n001 = res.y * res.x;
+
+	const unsigned int i000 = pi.x * n100 + pi.y * n010 + pi.z * n001;
+	const unsigned int i010 = i000 + n010;
+	const unsigned int i100 = i000 + n100;
+	const unsigned int i001 = i000 + n001;
+	const unsigned int i110 = i010 + n100;
+	const unsigned int i011 = i010 + n001;
+	const unsigned int i101 = i100 + n001;
+	const unsigned int i111 = i110 + n001;
+
+	return math::interpolate_trilinear(
+			grid[i000], grid[i100], grid[i101], grid[i001], grid[i010], grid[i110], grid[i111], grid[i011], pf);
+}
+
 } // namespace zylann::voxel
+
+namespace zylann::voxel::ops {
+
+template <typename Op, typename Shape>
+struct SdfOperation16bit {
+	Op op;
+	Shape shape;
+	inline int16_t operator()(Vector3i pos, int16_t sdf) const {
+		return snorm_to_s16(op(s16_to_snorm(sdf), shape(Vector3(pos))));
+	}
+};
+
+struct SdfUnion {
+	inline real_t operator()(real_t a, real_t b) const {
+		return zylann::math::sdf_union(a, b);
+	}
+};
+
+struct SdfSubtract {
+	inline real_t operator()(real_t a, real_t b) const {
+		return zylann::math::sdf_subtract(a, b);
+	}
+};
+
+struct SdfSet {
+	inline real_t operator()(real_t a, real_t b) const {
+		return b;
+	}
+};
+
+struct SdfSphere {
+	Vector3 center;
+	real_t radius;
+	real_t scale;
+
+	inline real_t operator()(Vector3 pos) const {
+		return scale * zylann::math::sdf_sphere(pos, center, radius);
+	}
+};
+
+struct TextureParams {
+	float opacity = 1.f;
+	float sharpness = 2.f;
+	unsigned int index = 0;
+};
+
+struct TextureBlendSphereOp {
+	Vector3 center;
+	float radius;
+	float radius_squared;
+	TextureParams tp;
+
+	TextureBlendSphereOp(Vector3 p_center, float p_radius, TextureParams p_tp) {
+		center = p_center;
+		radius = p_radius;
+		radius_squared = p_radius * p_radius;
+		tp = p_tp;
+	}
+
+	inline void operator()(Vector3i pos, uint16_t &indices, uint16_t &weights) const {
+		const float distance_squared = Vector3(pos).distance_squared_to(center);
+		if (distance_squared < radius_squared) {
+			const float distance_from_radius = radius - Math::sqrt(distance_squared);
+			const float target_weight =
+					tp.opacity * math::clamp(tp.sharpness * (distance_from_radius / radius), 0.f, 1.f);
+			blend_texture_packed_u16(tp.index, target_weight, indices, weights);
+		}
+	}
+};
+
+}; // namespace zylann::voxel::ops
 
 #endif // VOXEL_EDITION_FUNCS_H

@@ -2,6 +2,7 @@
 #include "../storage/voxel_buffer_gd.h"
 #include "../util/log.h"
 #include "../util/math/color8.h"
+#include "../util/math/conv.h"
 #include "../util/profiling.h"
 
 namespace zylann::voxel {
@@ -182,7 +183,7 @@ inline float sdf_blend(float src_value, float dst_value, VoxelTool::Mode mode) {
 void VoxelTool::do_sphere(Vector3 center, float radius) {
 	ZN_PROFILE_SCOPE();
 
-	const Box3i box(Vector3iUtil::from_floored(center) - Vector3iUtil::create(Math::floor(radius)),
+	const Box3i box(math::floor_to_int(center) - Vector3iUtil::create(Math::floor(radius)),
 			Vector3iUtil::create(Math::ceil(radius) * 2));
 
 	if (!is_area_editable(box)) {
@@ -285,6 +286,46 @@ Variant VoxelTool::get_voxel_metadata(Vector3i pos) const {
 	return Variant();
 }
 
+uint64_t VoxelTool::_b_get_voxel(Vector3i pos) {
+	return get_voxel(pos);
+}
+
+float VoxelTool::_b_get_voxel_f(Vector3i pos) {
+	return get_voxel_f(pos);
+}
+
+void VoxelTool::_b_set_voxel(Vector3i pos, uint64_t v) {
+	set_voxel(pos, v);
+}
+
+void VoxelTool::_b_set_voxel_f(Vector3i pos, float v) {
+	set_voxel_f(pos, v);
+}
+
+Ref<VoxelRaycastResult> VoxelTool::_b_raycast(Vector3 pos, Vector3 dir, float max_distance, uint32_t collision_mask) {
+	return raycast(pos, dir, max_distance, collision_mask);
+}
+
+void VoxelTool::_b_do_point(Vector3i pos) {
+	do_point(pos);
+}
+
+void VoxelTool::_b_do_line(Vector3 begin, Vector3 end) {
+	do_line(math::floor_to_int(begin), math::floor_to_int(end));
+}
+
+void VoxelTool::_b_do_circle(Vector3 pos, float radius, Vector3 direction) {
+	do_circle(math::floor_to_int(pos), radius, math::floor_to_int(direction));
+}
+
+void VoxelTool::_b_do_sphere(Vector3 pos, float radius) {
+	do_sphere(pos, radius);
+}
+
+void VoxelTool::_b_do_box(Vector3i begin, Vector3i end) {
+	do_box(begin, end);
+}
+
 void VoxelTool::_b_copy(Vector3i pos, Ref<gd::VoxelBuffer> voxels, int channel_mask) {
 	copy(pos, voxels, channel_mask);
 }
@@ -292,6 +333,18 @@ void VoxelTool::_b_copy(Vector3i pos, Ref<gd::VoxelBuffer> voxels, int channel_m
 void VoxelTool::_b_paste(Vector3i pos, Ref<gd::VoxelBuffer> voxels, int channels_mask, int64_t mask_value) {
 	// TODO May need two functions, one masked, one not masked, or add a parameter, but it breaks compat
 	paste(pos, voxels, channels_mask, mask_value > 0xffffffff, mask_value);
+}
+
+Variant VoxelTool::_b_get_voxel_metadata(Vector3i pos) const {
+	return get_voxel_metadata(pos);
+}
+
+void VoxelTool::_b_set_voxel_metadata(Vector3i pos, Variant meta) {
+	return set_voxel_metadata(pos, meta);
+}
+
+bool VoxelTool::_b_is_area_editable(AABB box) const {
+	return is_area_editable(Box3i(math::floor_to_int(box.position), math::floor_to_int(box.size)));
 }
 
 static int _b_color_to_u16(Color col) {

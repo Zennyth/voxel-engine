@@ -1,6 +1,6 @@
 #include "voxel_mesher_dmc.h"
 #include "../../constants/cube_tables.h"
-#include "../../util/godot/funcs.h"
+#include "../../util/math/conv.h"
 #include "marching_cubes_tables.h"
 #include "mesh_builder.h"
 #include "octree_tables.h"
@@ -125,7 +125,7 @@ bool can_split(Vector3i node_origin, int node_size, const VoxelAccess &voxels, f
 
 		HermiteValue value = get_hermite_value(voxels.buffer, pos.x, pos.y, pos.z);
 
-		float interpolated_value = math::interpolate(v0, v1, v2, v3, v4, v5, v6, v7, positions_ratio[i]);
+		float interpolated_value = math::interpolate_trilinear(v0, v1, v2, v3, v4, v5, v6, v7, positions_ratio[i]);
 
 		float gradient_magnitude = value.gradient.length();
 		if (gradient_magnitude < FLT_EPSILON) {

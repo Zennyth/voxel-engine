@@ -589,6 +589,7 @@ void VoxelBufferInternal::duplicate_to(VoxelBufferInternal &dst, bool include_me
 
 void VoxelBufferInternal::move_to(VoxelBufferInternal &dst) {
 	if (this == &dst) {
+		ZN_PRINT_VERBOSE("Moving VoxelBufferInternal to itself?");
 		return;
 	}
 
@@ -773,6 +774,59 @@ float VoxelBufferInternal::get_sdf_quantization_scale(Depth d) {
 		default:
 			return 1.f;
 	}
+}
+
+void VoxelBufferInternal::get_range_f(float &out_min, float &out_max, ChannelId channel_index) const {
+	const Channel &channel = _channels[channel_index];
+	float min_value = get_voxel_f(0, 0, 0, channel_index);
+	float max_value = min_value;
+
+	if (channel.data == nullptr) {
+		out_min = min_value;
+		out_max = max_value;
+		return;
+	}
+
+	const uint64_t volume = get_volume();
+
+	switch (channel.depth) {
+		case DEPTH_8_BIT:
+			for (unsigned int i = 0; i < volume; ++i) {
+				const float v = s8_to_snorm(channel.data[i]);
+				min_value = math::min(v, min_value);
+				max_value = math::max(v, max_value);
+			}
+			break;
+		case DEPTH_16_BIT: {
+			const int16_t *data = reinterpret_cast<const int16_t *>(channel.data);
+			for (unsigned int i = 0; i < volume; ++i) {
+				const float v = s16_to_snorm(data[i]);
+				min_value = math::min(v, min_value);
+				max_value = math::max(v, max_value);
+			}
+		} break;
+		case DEPTH_32_BIT: {
+			const float *data = reinterpret_cast<const float *>(channel.data);
+			for (unsigned int i = 0; i < volume; ++i) {
+				const float v = data[i];
+				min_value = math::min(v, min_value);
+				max_value = math::max(v, max_value);
+			}
+		} break;
+		case DEPTH_64_BIT: {
+			const double *data = reinterpret_cast<const double *>(channel.data);
+			for (unsigned int i = 0; i < volume; ++i) {
+				const double v = data[i];
+				min_value = math::min(v, double(min_value));
+				max_value = math::max(v, double(max_value));
+			}
+		} break;
+		default:
+			CRASH_NOW();
+	}
+
+	out_min = min_value;
+	out_max = max_value;
 }
 
 const VoxelMetadata *VoxelBufferInternal::get_voxel_metadata(Vector3i pos) const {

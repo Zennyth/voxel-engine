@@ -83,24 +83,20 @@ void raw_copy_to(Vector<T> &to, const std::vector<T> &from) {
 	memcpy(to.ptrw(), from.data(), from.size() * sizeof(T));
 }
 
-inline Vector2f to_vec2f(Vector2i v) {
-	return Vector2f(v.x, v.y);
+inline String to_godot(const std::string_view sv) {
+	return String::utf8(sv.data(), sv.size());
 }
 
 inline Vector2f to_vec2f(Vector2 v) {
 	return Vector2f(v.x, v.y);
 }
 
-inline Vector3f to_vec3f(Vector3i v) {
-	return Vector3f(v.x, v.y, v.z);
+inline Vector2f to_vec2f(Vector2i v) {
+	return Vector2f(v.x, v.y);
 }
 
-inline Vector3f to_vec3f(Vector3 v) {
-	return Vector3f(v.x, v.y, v.z);
-}
-
-inline String to_godot(const std::string_view sv) {
-	return String::utf8(sv.data(), sv.size());
+inline Vector3 to_godot(const Vector3f v) {
+	return Vector3(v.x, v.y, v.z);
 }
 
 // Turns out these functions are only used in editor for now.
@@ -112,9 +108,21 @@ PackedStringArray to_godot(const std::vector<std::string> &sv);
 
 #endif
 
-template <typename T>
-Span<const T> to_span_const(const Vector<T> &a) {
-	return Span<const T>(a.ptr(), 0, a.size());
+// template <typename T>
+// Span<const T> to_span_const(const Vector<T> &a) {
+// 	return Span<const T>(a.ptr(), 0, a.size());
+// }
+
+inline Span<const Vector2> to_span(const PackedVector2Array &a) {
+	return Span<const Vector2>(a.ptr(), a.size());
+}
+
+inline Span<const Vector3> to_span(const PackedVector3Array &a) {
+	return Span<const Vector3>(a.ptr(), a.size());
+}
+
+inline Span<const int> to_span(const PackedInt32Array &a) {
+	return Span<const int>(a.ptr(), a.size());
 }
 
 inline String ptr2s(const void *p) {
@@ -123,6 +131,7 @@ inline String ptr2s(const void *p) {
 
 } // namespace zylann
 
+// Needed for `zylann::format()`.
 // I gave up trying to nicely convert Godot's String here... it has non-explicit `const char*` constructor, that makes
 // other overloads ambiguous...
 //std::stringstream &operator<<(std::stringstream &ss, const String &s);

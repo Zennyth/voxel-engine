@@ -70,6 +70,7 @@ def get_doc_classes():
         "VoxelBlockSerializer",
         "VoxelVoxLoader",
         "VoxelDataBlockEnterInfo",
+        "VoxelMeshSDF",
 
         "ZN_FastNoiseLite",
         "ZN_FastNoiseLiteGradient",
