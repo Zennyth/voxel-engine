@@ -304,6 +304,22 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 
 			h -= origin.y;
 			int ih = int(h) >> lod;
+			
+			if (water_level > origin.y) {
+				int start_relative_height = 0;
+				if(ih < water_level - origin.y) {
+					start_relative_height = ih;
+				}
+
+				int fill_level = bs.y;
+				if(origin.y + bs.y > water_level) {
+					fill_level = water_level - origin.y - 1;
+				}
+
+				// int fill_level = bs.y;
+				out_buffer.fill_area(water.to_u16(), Vector3i(x, start_relative_height, z),
+						Vector3i(x + 1, fill_level, z + 1), channel);
+			}
 
 			if (ih > 0) {
 				if (ih > bs.y) {
@@ -314,20 +330,6 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 						Vector3i(x + 1, ih, z + 1), channel);
 			}
 
-			int relative_height = ih;
-			if (water_level > origin.y) {
-				int start_relative_height = 0;
-				if (relative_height > water_level - origin.y)
-					start_relative_height = relative_height;
-
-				int fill_level = bs.y;
-				if (water_level > origin.y + bs.y)
-					fill_level = water_level - origin.y;
-
-				// int fill_level = bs.y;
-				out_buffer.fill_area(water.to_u16(), Vector3i(x, start_relative_height, z),
-						Vector3i(x + 1, fill_level, z + 1), channel);
-			}
 		} // for x
 	} // for z
 
