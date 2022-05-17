@@ -77,8 +77,8 @@ public:
 	void set_automatic_loading_enabled(bool enable);
 	bool is_automatic_loading_enabled() const;
 
-	void set_material(unsigned int id, Ref<Material> material);
-	Ref<Material> get_material(unsigned int id) const;
+	void set_material_override(Ref<Material> material);
+	Ref<Material> get_material_override() const;
 
 	VoxelDataMap &get_storage() {
 		return _data_map;
@@ -146,10 +146,6 @@ protected:
 	void _on_gi_mode_changed() override;
 
 private:
-	bool _set(const StringName &p_name, const Variant &p_value);
-	bool _get(const StringName &p_name, Variant &r_ret) const;
-	void _get_property_list(List<PropertyInfo> *p_list) const;
-
 	void _process();
 	void process_viewers();
 	//void process_received_data_blocks();
@@ -253,7 +249,7 @@ private:
 	};
 
 	// Blocks currently being loaded.
-	HashMap<Vector3i, LoadingBlock, Vector3iHasher> _loading_blocks;
+	std::unordered_map<Vector3i, LoadingBlock> _loading_blocks;
 	// Blocks that should be loaded on the next process call.
 	// The order in that list does not matter.
 	std::vector<Vector3i> _blocks_pending_load;
@@ -279,7 +275,7 @@ private:
 	// If enabled, VoxelViewers will cause blocks to automatically load around them.
 	bool _automatic_loading_enabled = true;
 
-	Ref<Material> _materials[VoxelMesherBlocky::MAX_MATERIALS];
+	Ref<Material> _material_override;
 
 	GodotObjectUniquePtr<VoxelDataBlockEnterInfo> _data_block_enter_info_obj;
 
