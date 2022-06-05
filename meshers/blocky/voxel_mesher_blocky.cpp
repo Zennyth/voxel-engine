@@ -49,8 +49,13 @@ static thread_local std::vector<int> tls_index_offsets;
 
 template <typename Type_T>
 void generate_blocky_mesh(std::vector<VoxelMesherBlocky::Arrays> &out_arrays_per_material,
-		const Span<Type_T> type_buffer, const Vector3i block_size, const VoxelBlockyLibrary::BakedData &library,
-		bool bake_occlusion, float baked_occlusion_darkness) {
+		VoxelMesher::Output::CollisionSurface *collision_surface, const Span<Type_T> type_buffer,
+		const Vector3i block_size, const VoxelBlockyLibrary::BakedData &library, bool bake_occlusion,
+		float baked_occlusion_darkness) {
+	// TODO Optimization: not sure if this mandates a template function. There is so much more happening in this
+	// function other than reading voxels, although reading is on the hottest path. It needs to be profiled. If
+	// changing makes no difference, we could use a function pointer or switch inside instead to reduce executable size.
+
 	ERR_FAIL_COND(block_size.x < static_cast<int>(2 * VoxelMesherBlocky::PADDING) ||
 			block_size.y < static_cast<int>(2 * VoxelMesherBlocky::PADDING) ||
 			block_size.z < static_cast<int>(2 * VoxelMesherBlocky::PADDING));
@@ -68,6 +73,8 @@ void generate_blocky_mesh(std::vector<VoxelMesherBlocky::Arrays> &out_arrays_per
 	std::vector<int> &index_offsets = tls_index_offsets;
 	index_offsets.clear();
 	index_offsets.resize(out_arrays_per_material.size(), 0);
+
+	int collision_surface_index_offset = 0;
 
 	FixedArray<int, Cube::SIDE_COUNT> side_neighbor_lut;
 	side_neighbor_lut[Cube::SIDE_LEFT] = row_size;
@@ -142,7 +149,7 @@ void generate_blocky_mesh(std::vector<VoxelMesherBlocky::Arrays> &out_arrays_per
 				const VoxelBlockyModel::BakedData::Model &model = voxel.model;
 
 				// Hybrid approach: extract cube faces and decimate those that aren't visible,
-				// and still allow voxels to have geometry that is not a cube
+				// and still allow voxels to have geometry that is not a cube.
 
 				// Sides
 				for (unsigned int side = 0; side < Cube::SIDE_COUNT; ++side) {
@@ -250,7 +257,7 @@ void generate_blocky_mesh(std::vector<VoxelMesherBlocky::Arrays> &out_arrays_per
 
 							if (bake_occlusion) {
 								for (unsigned int i = 0; i < vertex_count; ++i) {
-									Vector3f vertex_pos = side_positions[i];
+									const Vector3f vertex_pos = side_positions[i];
 
 									// General purpose occlusion colouring.
 									// TODO Optimize for cubes
@@ -264,7 +271,7 @@ void generate_blocky_mesh(std::vector<VoxelMesherBlocky::Arrays> &out_arrays_per
 													static_cast<float>(shaded_corner[corner]);
 											//float k = 1.f - Cube::g_corner_position[corner].distance_to(v);
 											float k = 1.f -
-													Cube::g_corner_position[corner].distance_squared_to(vertex_pos);
+													math::distance_squared(Cube::g_corner_position[corner], vertex_pos);
 											if (k < 0.0) {
 												k = 0.0;
 											}
@@ -295,6 +302,31 @@ void generate_blocky_mesh(std::vector<VoxelMesherBlocky::Arrays> &out_arrays_per
 							for (unsigned int j = 0; j < index_count; ++j) {
 								w[i++] = index_offset + side_indices[j];
 							}
+						}
+
+						if (collision_surface != nullptr && surface.collision_enabled) {
+							std::vector<Vector3f> &dst_positions = collision_surface->positions;
+							std::vector<int> &dst_indices = collision_surface->indices;
+
+							{
+								const unsigned int append_index = dst_positions.size();
+								dst_positions.resize(dst_positions.size() + vertex_count);
+								Vector3f *w = dst_positions.data() + append_index;
+								for (unsigned int i = 0; i < vertex_count; ++i) {
+									w[i] = side_positions[i] + pos;
+								}
+							}
+
+							{
+								int i = dst_indices.size();
+								dst_indices.resize(dst_indices.size() + index_count);
+								int *w = dst_indices.data();
+								for (unsigned int j = 0; j < index_count; ++j) {
+									w[i++] = collision_surface_index_offset + side_indices[j];
+								}
+							}
+
+							collision_surface_index_offset += vertex_count;
 						}
 
 						index_offset += vertex_count;
@@ -344,6 +376,20 @@ void generate_blocky_mesh(std::vector<VoxelMesherBlocky::Arrays> &out_arrays_per
 
 					for (unsigned int i = 0; i < index_count; ++i) {
 						arrays.indices.push_back(index_offset + indices[i]);
+					}
+
+					if (collision_surface != nullptr && surface.collision_enabled) {
+						std::vector<Vector3f> &dst_positions = collision_surface->positions;
+						std::vector<int> &dst_indices = collision_surface->indices;
+
+						for (unsigned int i = 0; i < vertex_count; ++i) {
+							dst_positions.push_back(positions[i] + pos);
+						}
+						for (unsigned int i = 0; i < index_count; ++i) {
+							dst_indices.push_back(collision_surface_index_offset + indices[i]);
+						}
+
+						collision_surface_index_offset += vertex_count;
 					}
 
 					index_offset += vertex_count;
@@ -472,13 +518,20 @@ void VoxelMesherBlocky::build(VoxelMesher::Output &output, const VoxelMesher::In
 	const Vector3i block_size = voxels.get_size();
 	const VoxelBufferInternal::Depth channel_depth = voxels.get_channel_depth(channel);
 
+	VoxelMesher::Output::CollisionSurface *collision_surface = nullptr;
+	if (input.collision_hint) {
+		collision_surface = &output.collision_surface;
+	}
+
 	unsigned int material_count = 0;
 	{
 		// We can only access baked data. Only this data is made for multithreaded access.
 		RWLockRead lock(params.library->get_baked_data_rw_lock());
 		const VoxelBlockyLibrary::BakedData &library_baked_data = params.library->get_baked_data();
 
-		material_count = library_baked_data.indexed_materials_count;
+		// There must be at least one "material" in case none of them are assigned.
+		// This will produce a single surface, which will be rendered with a default material.
+		material_count = math::max(library_baked_data.indexed_materials_count, 1u);
 
 		if (arrays_per_material.size() < material_count) {
 			arrays_per_material.resize(material_count);
@@ -486,13 +539,14 @@ void VoxelMesherBlocky::build(VoxelMesher::Output &output, const VoxelMesher::In
 
 		switch (channel_depth) {
 			case VoxelBufferInternal::DEPTH_8_BIT:
-				generate_blocky_mesh(arrays_per_material, raw_channel, block_size, library_baked_data,
-						params.bake_occlusion, baked_occlusion_darkness);
+				generate_blocky_mesh(arrays_per_material, collision_surface, raw_channel, block_size,
+						library_baked_data, params.bake_occlusion, baked_occlusion_darkness);
 				break;
 
 			case VoxelBufferInternal::DEPTH_16_BIT:
-				generate_blocky_mesh(arrays_per_material, raw_channel.reinterpret_cast_to<uint16_t>(), block_size,
-						library_baked_data, params.bake_occlusion, baked_occlusion_darkness);
+				generate_blocky_mesh(arrays_per_material, collision_surface,
+						raw_channel.reinterpret_cast_to<uint16_t>(), block_size, library_baked_data,
+						params.bake_occlusion, baked_occlusion_darkness);
 				break;
 
 			default:

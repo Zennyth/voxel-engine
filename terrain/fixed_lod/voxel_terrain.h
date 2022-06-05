@@ -1,7 +1,7 @@
 #ifndef VOXEL_TERRAIN_H
 #define VOXEL_TERRAIN_H
 
-#include "../../server/voxel_server.h"
+#include "../../server/meshing_dependency.h"
 #include "../../storage/voxel_data_map.h"
 #include "../../util/godot/funcs.h"
 #include "../voxel_data_block_enter_info.h"
@@ -110,9 +110,6 @@ public:
 	// If the block is out of range of any viewer, it will be cancelled.
 	void generate_block_async(Vector3i block_position);
 
-	// For convenience, this is actually stored in a particular type of mesher
-	Ref<VoxelBlockyLibrary> get_voxel_library() const;
-
 	struct Stats {
 		int updated_blocks = 0;
 		int dropped_block_loads = 0;
@@ -138,6 +135,10 @@ public:
 
 	uint32_t get_volume_id() const override {
 		return _volume_id;
+	}
+
+	std::shared_ptr<StreamingDependency> get_streaming_dependency() const override {
+		return _streaming_dependency;
 	}
 
 protected:
@@ -263,6 +264,10 @@ private:
 	Ref<VoxelStream> _stream;
 	Ref<VoxelMesher> _mesher;
 	Ref<VoxelGenerator> _generator;
+
+	// Data stored with a shared pointer so it can be sent to asynchronous tasks
+	std::shared_ptr<StreamingDependency> _streaming_dependency;
+	std::shared_ptr<MeshingDependency> _meshing_dependency;
 
 	bool _generate_collisions = true;
 	unsigned int _collision_layer = 1;

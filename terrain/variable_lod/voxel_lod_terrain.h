@@ -10,6 +10,7 @@
 #include "voxel_lod_terrain_update_data.h"
 #include "voxel_mesh_block_vlt.h"
 
+#include <map>
 #include <unordered_set>
 
 #ifdef TOOLS_ENABLED
@@ -224,6 +225,10 @@ public:
 	bool is_showing_octree_gizmos() const {
 		return _show_octree_node_gizmos;
 	}
+	void set_show_octree_bounds_gizmos(bool enable);
+	bool is_showing_octree_bounds_gizmos() const {
+		return _show_octree_bounds_gizmos;
+	}
 
 	TypedArray<String> get_configuration_warnings() const override;
 
@@ -234,6 +239,9 @@ public:
 	void set_instancer(VoxelInstancer *instancer);
 	uint32_t get_volume_id() const override {
 		return _volume_id;
+	}
+	std::shared_ptr<StreamingDependency> get_streaming_dependency() const override {
+		return _streaming_dependency;
 	}
 
 	Array get_mesh_block_surface(Vector3i block_pos, int lod_index) const;
@@ -260,6 +268,7 @@ private:
 	void start_streamer();
 	void stop_streamer();
 	void reset_maps();
+	void reset_mesh_maps();
 
 	Vector3 get_local_viewer_pos() const;
 	void _set_lod_count(int p_lod_count);
@@ -311,7 +320,7 @@ private:
 	// Note, direct pointers to mesh blocks should be safe because these blocks are always destroyed from the same
 	// thread that updates fading blocks. If a mesh block is destroyed, these maps should be updated at the same time.
 	// TODO Optimization: use FlatMap? Need to check how many blocks get in there, probably not many
-	FixedArray<Map<Vector3i, VoxelMeshBlockVLT *>, constants::MAX_LOD> _fading_blocks_per_lod;
+	FixedArray<std::map<Vector3i, VoxelMeshBlockVLT *>, constants::MAX_LOD> _fading_blocks_per_lod;
 
 	VoxelInstancer *_instancer = nullptr;
 

@@ -2,6 +2,11 @@
 #include "../../constants/voxel_constants.h"
 #include "../../constants/voxel_string_names.h"
 #include "../../edition/voxel_tool_terrain.h"
+#include "../../meshers/blocky/voxel_mesher_blocky.h"
+#include "../../server/generate_block_task.h"
+#include "../../server/load_block_data_task.h"
+#include "../../server/mesh_block_task.h"
+#include "../../server/save_block_data_task.h"
 #include "../../server/voxel_server.h"
 #include "../../server/voxel_server_updater.h"
 #include "../../storage/voxel_buffer_gd.h"
@@ -30,6 +35,9 @@ VoxelTerrain::VoxelTerrain() {
 	// TODO Should it actually be finite for better discovery?
 	// Infinite by default
 	_bounds_in_voxels = Box3i::from_center_extents(Vector3i(), Vector3iUtil::create(constants::MAX_VOLUME_EXTENT));
+
+	_streaming_dependency = make_shared_instance<StreamingDependency>();
+	_meshing_dependency = make_shared_instance<MeshingDependency>();
 
 	struct ApplyMeshUpdateTask : public ITimeSpreadTask {
 		void run(TimeSpreadTaskContext &ctx) override {
@@ -63,7 +71,7 @@ VoxelTerrain::VoxelTerrain() {
 		self->apply_data_block_response(ob);
 	};
 
-	_volume_id = VoxelServer::get_singleton().add_volume(callbacks, VoxelServer::VOLUME_SPARSE_GRID);
+	_volume_id = VoxelServer::get_singleton().add_volume(callbacks);
 
 	// TODO Can't setup a default mesher anymore due to a Godot 4 warning...
 	// For ease of use in editor
@@ -74,6 +82,8 @@ VoxelTerrain::VoxelTerrain() {
 
 VoxelTerrain::~VoxelTerrain() {
 	ZN_PRINT_VERBOSE("Destroying VoxelTerrain");
+	_streaming_dependency->valid = false;
+	_meshing_dependency->valid = false;
 	VoxelServer::get_singleton().remove_volume(_volume_id);
 }
 
@@ -97,6 +107,8 @@ void VoxelTerrain::set_stream(Ref<VoxelStream> p_stream) {
 	}
 
 	_stream = p_stream;
+
+	StreamingDependency::reset(_streaming_dependency, _stream, _generator);
 
 #ifdef TOOLS_ENABLED
 	if (_stream.is_valid()) {
@@ -125,6 +137,9 @@ void VoxelTerrain::set_generator(Ref<VoxelGenerator> p_generator) {
 	}
 
 	_generator = p_generator;
+
+	MeshingDependency::reset(_meshing_dependency, _mesher, p_generator);
+	StreamingDependency::reset(_streaming_dependency, _stream, p_generator);
 
 #ifdef TOOLS_ENABLED
 	if (_generator.is_valid()) {
@@ -217,7 +232,7 @@ void VoxelTerrain::set_mesh_block_size(unsigned int mesh_block_size) {
 		viewer.prev_state.mesh_box = Box3i();
 	}
 
-	VoxelServer::get_singleton().set_volume_render_block_size(_volume_id, mesh_block_size);
+	// VoxelServer::get_singleton().set_volume_render_block_size(_volume_id, mesh_block_size);
 
 	// No update on bounds because we can support a mismatch, as long as it is a multiple of data block size
 	//set_bounds(_bounds_in_voxels);
@@ -236,8 +251,8 @@ void VoxelTerrain::_on_stream_params_changed() {
 		_set_block_size_po2(stream_block_size_po2);
 	}
 
-	VoxelServer::get_singleton().set_volume_data_block_size(_volume_id, 1 << get_data_block_size_pow2());
-	VoxelServer::get_singleton().set_volume_render_block_size(_volume_id, 1 << get_mesh_block_size_pow2());
+	// VoxelServer::get_singleton().set_volume_data_block_size(_volume_id, 1 << get_data_block_size_pow2());
+	// VoxelServer::get_singleton().set_volume_render_block_size(_volume_id, 1 << get_mesh_block_size_pow2());
 
 	// The whole map might change, so regenerate it
 	reset_map();
@@ -269,6 +284,8 @@ void VoxelTerrain::set_mesher(Ref<VoxelMesher> mesher) {
 
 	_mesher = mesher;
 
+	MeshingDependency::reset(_meshing_dependency, _mesher, _generator);
+
 	stop_updater();
 
 	if (_mesher.is_valid()) {
@@ -278,14 +295,6 @@ void VoxelTerrain::set_mesher(Ref<VoxelMesher> mesher) {
 	}
 
 	update_configuration_warnings();
-}
-
-Ref<VoxelBlockyLibrary> VoxelTerrain::get_voxel_library() const {
-	Ref<VoxelMesherBlocky> blocky_mesher = _mesher;
-	if (blocky_mesher.is_valid()) {
-		return blocky_mesher->get_library();
-	}
-	return Ref<VoxelBlockyLibrary>();
 }
 
 void VoxelTerrain::get_viewers_in_area(std::vector<int> &out_viewer_ids, Box3i voxel_box) const {
@@ -693,12 +702,14 @@ void VoxelTerrain::start_updater() {
 		}
 	}
 
-	VoxelServer::get_singleton().set_volume_mesher(_volume_id, _mesher);
+	// VoxelServer::get_singleton().set_volume_mesher(_volume_id, _mesher);
 }
 
 void VoxelTerrain::stop_updater() {
-	VoxelServer::get_singleton().invalidate_volume_mesh_requests(_volume_id);
-	VoxelServer::get_singleton().set_volume_mesher(_volume_id, Ref<VoxelMesher>());
+	// Invalidate pending tasks
+	MeshingDependency::reset(_meshing_dependency, _mesher, _generator);
+
+	// VoxelServer::get_singleton().set_volume_mesher(_volume_id, Ref<VoxelMesher>());
 
 	// TODO We can still receive a few mesh delayed mesh updates after this. Is it a problem?
 	//_reception_buffers.mesh_output.clear();
@@ -753,13 +764,15 @@ void VoxelTerrain::generate_block_async(Vector3i block_position) {
 }
 
 void VoxelTerrain::start_streamer() {
-	VoxelServer::get_singleton().set_volume_stream(_volume_id, _stream);
-	VoxelServer::get_singleton().set_volume_generator(_volume_id, _generator);
+	// VoxelServer::get_singleton().set_volume_stream(_volume_id, _stream);
+	// VoxelServer::get_singleton().set_volume_generator(_volume_id, _generator);
 }
 
 void VoxelTerrain::stop_streamer() {
-	VoxelServer::get_singleton().set_volume_stream(_volume_id, Ref<VoxelStream>());
-	VoxelServer::get_singleton().set_volume_generator(_volume_id, Ref<VoxelGenerator>());
+	// Invalidate pending tasks
+	StreamingDependency::reset(_streaming_dependency, _stream, _generator);
+	// VoxelServer::get_singleton().set_volume_stream(_volume_id, Ref<VoxelStream>());
+	// VoxelServer::get_singleton().set_volume_generator(_volume_id, Ref<VoxelGenerator>());
 	_loading_blocks.clear();
 	_blocks_pending_load.clear();
 }
@@ -873,7 +886,7 @@ void VoxelTerrain::_notification(int p_what) {
 
 		case NOTIFICATION_TRANSFORM_CHANGED: {
 			const Transform3D transform = get_global_transform();
-			VoxelServer::get_singleton().set_volume_transform(_volume_id, transform);
+			// VoxelServer::get_singleton().set_volume_transform(_volume_id, transform);
 
 			if (!is_inside_tree()) {
 				// The transform and other properties can be set by the scene loader,
@@ -892,14 +905,88 @@ void VoxelTerrain::_notification(int p_what) {
 	}
 }
 
+inline Vector3i get_block_center(Vector3i pos, int bs) {
+	return pos * bs + Vector3iUtil::create(bs / 2);
+}
+
+static void init_sparse_grid_priority_dependency(PriorityDependency &dep, Vector3i block_position, int block_size,
+		std::shared_ptr<PriorityDependency::ViewersData> &shared_viewers_data, const Transform3D &volume_transform) {
+	const Vector3i voxel_pos = get_block_center(block_position, block_size);
+	const float block_radius = block_size / 2;
+	dep.shared = shared_viewers_data;
+	dep.world_position = volume_transform.xform(voxel_pos);
+	const float transformed_block_radius =
+			volume_transform.basis.xform(Vector3(block_radius, block_radius, block_radius)).length();
+
+	// Distance beyond which no field of view can overlap the block.
+	// Doubling block radius to account for an extra margin of blocks,
+	// since they are used to provide neighbors when meshing
+	dep.drop_distance_squared =
+			math::squared(shared_viewers_data->highest_view_distance + 2.f * transformed_block_radius);
+}
+
+static void request_block_load(uint32_t volume_id, std::shared_ptr<StreamingDependency> stream_dependency,
+		uint32_t data_block_size, Vector3i block_pos,
+		std::shared_ptr<PriorityDependency::ViewersData> &shared_viewers_data, const Transform3D volume_transform,
+		bool request_instances) {
+	ZN_ASSERT(stream_dependency != nullptr);
+
+	if (stream_dependency->stream.is_valid()) {
+		PriorityDependency priority_dependency;
+		init_sparse_grid_priority_dependency(
+				priority_dependency, block_pos, data_block_size, shared_viewers_data, volume_transform);
+
+		LoadBlockDataTask *task = ZN_NEW(LoadBlockDataTask(
+				volume_id, block_pos, 0, data_block_size, request_instances, stream_dependency, priority_dependency));
+
+		VoxelServer::get_singleton().push_async_io_task(task);
+
+	} else {
+		// Directly generate the block without checking the stream
+		ERR_FAIL_COND(stream_dependency->generator.is_null());
+
+		GenerateBlockTask *task = ZN_NEW(GenerateBlockTask);
+		task->volume_id = volume_id;
+		task->position = block_pos;
+		task->lod = 0;
+		task->block_size = data_block_size;
+		task->stream_dependency = stream_dependency;
+
+		init_sparse_grid_priority_dependency(
+				task->priority_dependency, block_pos, data_block_size, shared_viewers_data, volume_transform);
+
+		VoxelServer::get_singleton().push_async_task(task);
+	}
+}
+
+static void request_voxel_block_save(uint32_t volume_id, const std::shared_ptr<VoxelBufferInternal> &voxels,
+		Vector3i block_pos, std::shared_ptr<StreamingDependency> &stream_dependency, unsigned int data_block_size) {
+	//
+	ZN_ASSERT(stream_dependency != nullptr);
+	ZN_ASSERT_RETURN(stream_dependency->stream.is_valid());
+
+	SaveBlockDataTask *task =
+			ZN_NEW(SaveBlockDataTask(volume_id, block_pos, 0, data_block_size, voxels, stream_dependency));
+
+	// No priority data, saving doesnt need sorting
+
+	VoxelServer::get_singleton().push_async_io_task(task);
+}
+
 void VoxelTerrain::send_block_data_requests() {
 	ZN_PROFILE_SCOPE();
+
+	std::shared_ptr<PriorityDependency::ViewersData> shared_viewers_data =
+			VoxelServer::get_singleton().get_shared_viewers_data_from_default_world();
+
+	const Transform3D volume_transform = get_global_transform();
 
 	// Blocks to load
 	for (size_t i = 0; i < _blocks_pending_load.size(); ++i) {
 		const Vector3i block_pos = _blocks_pending_load[i];
 		// TODO Batch request
-		VoxelServer::get_singleton().request_block_load(_volume_id, block_pos, 0, _instancer != nullptr);
+		request_block_load(_volume_id, _streaming_dependency, get_data_block_size(), block_pos, shared_viewers_data,
+				volume_transform, _instancer != nullptr);
 	}
 
 	// Blocks to save
@@ -908,7 +995,7 @@ void VoxelTerrain::send_block_data_requests() {
 			ZN_PRINT_VERBOSE(format("Requesting save of block {}", _blocks_to_save[i].position));
 			const BlockToSave b = _blocks_to_save[i];
 			// TODO Batch request
-			VoxelServer::get_singleton().request_voxel_block_save(_volume_id, b.voxels, b.position, 0);
+			request_voxel_block_save(_volume_id, b.voxels, b.position, _streaming_dependency, get_data_block_size());
 		}
 	} else {
 		if (_blocks_to_save.size() > 0) {
@@ -1345,6 +1432,9 @@ void VoxelTerrain::process_meshing() {
 	ProfilingClock profiling_clock;
 
 	_stats.dropped_block_meshs = 0;
+	const Transform3D volume_transform = get_global_transform();
+	std::shared_ptr<PriorityDependency::ViewersData> shared_viewers_data =
+			VoxelServer::get_singleton().get_shared_viewers_data_from_default_world();
 
 	// Send mesh updates
 	{
@@ -1375,35 +1465,47 @@ void VoxelTerrain::process_meshing() {
 			}
 #endif
 
-			VoxelServer::BlockMeshInput mesh_request;
-			mesh_request.render_block_position = mesh_block_pos;
-			mesh_request.lod = 0;
-			//mesh_request.data_blocks_count = data_box.size.volume();
+			//print_line(String("DDD request {0}").format(varray(mesh_request.render_block_position.to_vec3())));
+			// We'll allocate this quite often. If it becomes a problem, it should be easy to pool.
+			MeshBlockTask *task = ZN_NEW(MeshBlockTask);
+			task->volume_id = _volume_id;
+			task->position = mesh_block_pos;
+			task->lod = 0;
+			task->meshing_dependency = _meshing_dependency;
+			task->data_block_size = get_data_block_size();
+			task->collision_hint = _generate_collisions;
 
 			// This iteration order is specifically chosen to match VoxelServer and threaded access
-			data_box.for_each_cell_zxy([this, &mesh_request](Vector3i data_block_pos) {
+			task->blocks_count = 0;
+			data_box.for_each_cell_zxy([this, task](Vector3i data_block_pos) {
 				VoxelDataBlock *data_block = _data_map.get_block(data_block_pos);
 				if (data_block != nullptr) {
-					mesh_request.data_blocks[mesh_request.data_blocks_count] = data_block->get_voxels_shared();
+					task->blocks[task->blocks_count] = data_block->get_voxels_shared();
 				}
-				++mesh_request.data_blocks_count;
+				++task->blocks_count;
 			});
 
 #ifdef DEBUG_ENABLED
 			{
 				unsigned int count = 0;
-				for (unsigned int i = 0; i < mesh_request.data_blocks_count; ++i) {
-					if (mesh_request.data_blocks[i] != nullptr) {
+				for (unsigned int i = 0; i < task->blocks_count; ++i) {
+					if (task->blocks[i] != nullptr) {
 						++count;
 					}
 				}
 				// Blocks that were in the list must have been scheduled because we have data for them!
-				ERR_CONTINUE(count == 0);
+				if (count == 0) {
+					ZN_PRINT_ERROR("Unexpected empty block list in meshing block task");
+					ZN_DELETE(task);
+					continue;
+				}
 			}
 #endif
 
-			//print_line(String("DDD request {0}").format(varray(mesh_request.render_block_position.to_vec3())));
-			VoxelServer::get_singleton().request_block_mesh(_volume_id, mesh_request);
+			init_sparse_grid_priority_dependency(task->priority_dependency, task->position, get_mesh_block_size(),
+					shared_viewers_data, volume_transform);
+
+			VoxelServer::get_singleton().push_async_task(task);
 
 			mesh_block->set_mesh_state(VoxelMeshBlockVT::MESH_UPDATE_SENT);
 		}
@@ -1439,7 +1541,9 @@ void VoxelTerrain::apply_mesh_update(const VoxelServer::BlockMeshOutput &ob) {
 
 	Ref<ArrayMesh> mesh;
 
-	std::vector<Array> collidable_surfaces;
+	const bool gen_collisions = _generate_collisions && block->collision_viewers.get() > 0;
+	const bool use_render_mesh_as_collider = gen_collisions && ob.surfaces.collision_surface.positions.size() == 0;
+	std::vector<Array> render_surfaces;
 
 	int gd_surface_index = 0;
 	for (unsigned int surface_index = 0; surface_index < ob.surfaces.surfaces.size(); ++surface_index) {
@@ -1454,7 +1558,9 @@ void VoxelTerrain::apply_mesh_update(const VoxelServer::BlockMeshOutput &ob) {
 			continue;
 		}
 
-		collidable_surfaces.push_back(arrays);
+		if (use_render_mesh_as_collider) {
+			render_surfaces.push_back(arrays);
+		}
 
 		if (mesh.is_null()) {
 			mesh.instantiate();
@@ -1470,7 +1576,7 @@ void VoxelTerrain::apply_mesh_update(const VoxelServer::BlockMeshOutput &ob) {
 
 	if (mesh.is_valid() && is_mesh_empty(**mesh)) {
 		mesh = Ref<Mesh>();
-		collidable_surfaces.clear();
+		render_surfaces.clear();
 	}
 
 	if (_instancer != nullptr) {
@@ -1486,18 +1592,28 @@ void VoxelTerrain::apply_mesh_update(const VoxelServer::BlockMeshOutput &ob) {
 		}
 	}
 
-	const bool gen_collisions = _generate_collisions && block->collision_viewers.get() > 0;
-
 	block->set_mesh(mesh, DirectMeshInstance::GIMode(get_gi_mode()));
+
 	if (_material_override.is_valid()) {
 		block->set_material_override(_material_override);
 	}
+
 	if (gen_collisions) {
-		block->set_collision_mesh(to_span_const(collidable_surfaces), get_tree()->is_debugging_collisions_hint(), this,
-				_collision_margin);
+		const bool debug_collisions = get_tree()->is_debugging_collisions_hint();
+		const VoxelMesher::Output::CollisionSurface &collision_surface = ob.surfaces.collision_surface;
+
+		if (use_render_mesh_as_collider) {
+			block->set_collision_mesh(to_span(render_surfaces), debug_collisions, this, _collision_margin);
+
+		} else {
+			block->set_collision_mesh(to_span(collision_surface.positions), to_span(collision_surface.indices),
+					debug_collisions, this, _collision_margin);
+		}
+
 		block->set_collision_layer(_collision_layer);
 		block->set_collision_mask(_collision_mask);
 	}
+
 	block->set_visible(true);
 	block->set_parent_visible(is_visible());
 	block->set_parent_transform(get_global_transform());

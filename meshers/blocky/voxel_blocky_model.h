@@ -43,8 +43,8 @@ public:
 			FixedArray<std::vector<int>, Cube::SIDE_COUNT> side_indices;
 			FixedArray<std::vector<float>, Cube::SIDE_COUNT> side_tangents;
 
-			int material_id = -1;
-			//bool collision_enabled = true;
+			uint32_t material_id = 0;
+			bool collision_enabled = true;
 
 			void clear() {
 				positions.clear();
@@ -63,7 +63,7 @@ public:
 		};
 
 		struct Model {
-			static const uint32_t MAX_SURFACES = 2;
+			static constexpr uint32_t MAX_SURFACES = 2;
 
 			// A model can have up to 2 materials.
 			// If more is needed or profiling tells better, we could change it to a vector?
@@ -126,6 +126,9 @@ public:
 
 	void set_material_override(int index, Ref<Material> material);
 	Ref<Material> get_material_override(int index) const;
+
+	void set_mesh_collision_enabled(int surface_index, bool enabled);
+	bool is_mesh_collision_enabled(int surface_index) const;
 
 	// TODO Might become obsoleted by transparency index
 	void set_transparent(bool t = true);
@@ -227,7 +230,7 @@ private:
 		// If assigned, these materials override those present on the mesh itself.
 		Ref<Material> material_override;
 		// If true and classic mesh physics are enabled, the surface will be present in the collider.
-		//bool collision_enabled = true;
+		bool collision_enabled = true;
 	};
 
 	FixedArray<SurfaceParams, BakedData::Model::MAX_SURFACES> _surface_params;

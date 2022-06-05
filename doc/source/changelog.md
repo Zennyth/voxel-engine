@@ -24,6 +24,7 @@ Godot 4 is required from this version.
     - `VoxelGeneratorGraph`: editor: unconnected inputs show their default value directly on the node
     - `VoxelGeneratorGraph`: editor: allow to change the axes on preview nodes 3D slices
     - `VoxelGeneratorGraph`: editor: replace existing connection if dragging from/to an input port having one already
+    - `VoxelGeneratorGraph`: editor: creating noise and curve nodes now auto-create their resource instead of coming up null
     - `VoxelGeneratorGraph`: added `OutputSingleTexture` node for outputting a single texture index per voxel, as an alternative to weights. This is specific to smooth voxels.
     - `VoxelGeneratorGraph`: added math expression node
     - `VoxelGeneratorGraph`: added Pow and Powi nodes
@@ -35,6 +36,7 @@ Godot 4 is required from this version.
     - SDF data is now encoded with `inorm8` and `inorm16`, instead of an arbitrary version of `unorm8` and `unorm16`. Migration code is in place to load old save files, but *do a backup before running your project with the new version*.
     - `VoxelLodTerrain`: added *experimental* `full_load_mode`, in which all edited data is loaded at once, allowing any area to be edited anytime. Useful for some fixed-size volumes.
     - `VoxelLodTerrain`: Editor: added option to show octree nodes in editor
+    - `VoxelLodTerrain`: Editor: added option to show octree grid in editor, now off by default
     - `VoxelLodTerrain`: Added option to run a major part of the process logic into another thread
     - `VoxelToolLodTerrain`: added *experimental* `do_sphere_async`, an alternative version of `do_sphere` which defers the task on threads to reduce stutter if the affected area is big.
     - `VoxelToolLodTerrain`: added `stamp_sdf` function to place a baked mesh SDF on the terrain
@@ -45,7 +47,9 @@ Godot 4 is required from this version.
 
 - Blocky voxels
     - `VoxelMesherBlocky`: materials are now unlimited and specified in each model, either as overrides or directly from mesh (You still need to consider draw calls when using many materials)
-    - `VoxelMesherBlocky`: each model can have up to 2 materials
+    - `VoxelMesherBlocky`: each model can have up to 2 materials (aka surfaces)
+    - `VoxelMesherBlocky`: mesh collisions: added support for specifying which surfaces have collision
+    - `VoxelBoxMover`: added basic support for stair climbing
 
 - Fixes
     - `VoxelBuffer`: frequently creating buffers with always different sizes no longer wastes memory
@@ -58,6 +62,7 @@ Godot 4 is required from this version.
     - `VoxelMesherCubes`: fixed raw color mode not working properly
     - `VoxelMesherCubes`: wrong alpha check between transparent and solid cubes
     - `VoxelMesherTransvoxel`: fixed surface not appearing if it lines up exactly at integer coordinates
+    - `VoxelMesherTransvoxel`: fixed occasional holes and "spikes" in geometry in some specific configurations
     - `VoxelTerrain`: fixed `Condition "mesh_block == nullptr" is true` which could happen in some conditions
     - `VoxelTerrain`: changing a material now updates existing meshes instead of only new ones
     - `VoxelTool`: `raycast` locking up if you send a Vector3 containing NaN
