@@ -2,6 +2,7 @@
 #define ZYLANN_BORDER_H
 
 #include "core/core_bind.h"
+#include <map>
 
 
 struct PointResult {
@@ -43,7 +44,7 @@ public:
 	ClosestPointsResult get_closest_result(Vector2 location);
 
 private:
-	Map<Vector2, List<Vector2>> world_grid = {};
+	HashMap<Vector2, List<Vector2>> world_grid = {};
 	int scale = 1000;
 	int border_threshold = 1000000;
 

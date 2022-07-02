@@ -214,7 +214,7 @@ Error Data::_load_from_file(String fpath) {
 	ERR_FAIL_COND_V(strcmp(magic, "VOX ") != 0, ERR_PARSE_ERROR);
 
 	const uint32_t version = f.get_32();
-	ERR_FAIL_COND_V(version != 150, ERR_PARSE_ERROR);
+	// ERR_FAIL_COND_V(version != 150, ERR_PARSE_ERROR);
 
 	const size_t file_length = f.get_length();
 
