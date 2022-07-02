@@ -2,50 +2,87 @@
 #define VOXEL_DATA_BLOCK_H
 
 #include "../storage/voxel_buffer_internal.h"
-#include "../util/log.h"
 #include "../util/ref_count.h"
 #include <memory>
 
 namespace zylann::voxel {
 
-// Stores loaded voxel data for a chunk of the volume. Mesh and colliders are stored separately.
+// Stores voxel data for a chunk of the volume. Mesh and colliders are stored separately.
+// Voxel data can be present, or not. If not present, it means we know the block contains no edits, and voxels can be
+// obtained by querying generators.
+// Voxel data can also be present as a cache of generators, for cheaper repeated queries.
 class VoxelDataBlock {
 public:
-	const Vector3i position;
-	const unsigned int lod_index = 0;
 	RefCount viewers;
 
-	static VoxelDataBlock *create(
-			Vector3i bpos, std::shared_ptr<VoxelBufferInternal> &buffer, unsigned int size, unsigned int p_lod_index) {
-		ERR_FAIL_COND_V(buffer == nullptr, nullptr);
-		ERR_FAIL_COND_V(buffer->get_size() != Vector3i(size, size, size), nullptr);
-		return memnew(VoxelDataBlock(bpos, buffer, p_lod_index));
+	VoxelDataBlock() {}
+
+	VoxelDataBlock(unsigned int p_lod_index) : _lod_index(p_lod_index) {}
+
+	VoxelDataBlock(std::shared_ptr<VoxelBufferInternal> &buffer, unsigned int p_lod_index) :
+			_voxels(buffer), _lod_index(p_lod_index) {}
+
+	VoxelDataBlock(VoxelDataBlock &&src) :
+			viewers(src.viewers),
+			_voxels(std::move(src._voxels)),
+			_lod_index(src._lod_index),
+			_needs_lodding(src._needs_lodding),
+			_modified(src._modified),
+			_edited(src._edited) {}
+
+	VoxelDataBlock &operator=(VoxelDataBlock &&src) {
+		viewers = src.viewers;
+		_lod_index = src._lod_index;
+		_voxels = std::move(src._voxels);
+		_needs_lodding = src._needs_lodding;
+		_modified = src._modified;
+		_edited = src._edited;
+		return *this;
 	}
 
+	inline unsigned int get_lod_index() const {
+		return _lod_index;
+	}
+
+	// Tests if voxel data is present.
+	// If false, it means the block has no edits and does not contain cached generated data,
+	// so we may fallback on procedural generators on the fly or request a cache.
+	inline bool has_voxels() const {
+		return _voxels != nullptr;
+	}
+
+	// Get voxels, expecting them to be present
 	VoxelBufferInternal &get_voxels() {
 #ifdef DEBUG_ENABLED
-		CRASH_COND(_voxels == nullptr);
+		ZN_ASSERT(_voxels != nullptr);
 #endif
 		return *_voxels;
 	}
 
+	// Get voxels, expecting them to be present
 	const VoxelBufferInternal &get_voxels_const() const {
 #ifdef DEBUG_ENABLED
-		CRASH_COND(_voxels == nullptr);
+		ZN_ASSERT(_voxels != nullptr);
 #endif
 		return *_voxels;
 	}
 
+	// Get voxels, expecting them to be present
 	std::shared_ptr<VoxelBufferInternal> get_voxels_shared() const {
 #ifdef DEBUG_ENABLED
-		CRASH_COND(_voxels == nullptr);
+		ZN_ASSERT(_voxels != nullptr);
 #endif
 		return _voxels;
 	}
 
 	void set_voxels(std::shared_ptr<VoxelBufferInternal> &buffer) {
-		ERR_FAIL_COND(buffer == nullptr);
+		ZN_ASSERT_RETURN(buffer != nullptr);
 		_voxels = buffer;
+	}
+
+	void clear_voxels() {
+		_voxels = nullptr;
+		_edited = false;
 	}
 
 	void set_modified(bool modified);
@@ -63,7 +100,7 @@ public:
 	}
 
 	inline void set_edited(bool edited) {
-		_edited = true;
+		_edited = edited;
 	}
 
 	inline bool is_edited() const {
@@ -71,19 +108,19 @@ public:
 	}
 
 private:
-	VoxelDataBlock(Vector3i bpos, std::shared_ptr<VoxelBufferInternal> &buffer, unsigned int p_lod_index) :
-			position(bpos), lod_index(p_lod_index), _voxels(buffer) {}
-
 	std::shared_ptr<VoxelBufferInternal> _voxels;
 
-	// The block was edited, which requires its LOD counterparts to be recomputed
+	// TODO Storing lod index here might not be necessary, it is known since we have to get the map first
+	uint8_t _lod_index = 0;
+
+	// Indicates mipmaps need to be computed since this block was modified.
 	bool _needs_lodding = false;
 
 	// Indicates if this block is different from the time it was loaded (should be saved)
 	bool _modified = false;
 
 	// Tells if the block has ever been edited.
-	// If `false`, the same data can be obtained by running the generator.
+	// If `false`, then the data is a cache of generators and modifiers. It can be re-generated.
 	// Once it becomes `true`, it usually never comes back to `false` unless reverted.
 	bool _edited = false;
 

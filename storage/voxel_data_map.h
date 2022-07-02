@@ -3,6 +3,7 @@
 
 #include "../util/fixed_array.h"
 #include "../util/profiling.h"
+#include "modifiers.h"
 #include "voxel_data_block.h"
 
 #include <unordered_map>
@@ -11,9 +12,17 @@ namespace zylann::voxel {
 
 class VoxelGenerator;
 
-// Infinite voxel storage by means of octants like Gridmap, within a constant LOD.
+// Sparse voxel storage by means of cubic chunks, within a constant LOD.
+//
 // Convenience functions to access VoxelBuffers internally will lock them to protect against multithreaded access.
 // However, the map itself is not thread-safe.
+//
+// When doing data streaming, the volume is *partially* loaded. If a block is not found at some coordinates,
+// it means we don't know if it contains edits or not. Knowing this is important to avoid writing or caching voxel data
+// in blank areas, that may be completely different once loaded.
+// When using "full load" of edits, it doesn't matter. If all edits are loaded, we know up-front that everything else
+// isn't edited (which also means we may not find blocks without data in them).
+//
 class VoxelDataMap {
 public:
 	// Converts voxel coodinates into block coordinates.
@@ -75,6 +84,7 @@ public:
 
 	// Moves the given buffer into a block of the map. The buffer is referenced, no copy is made.
 	VoxelDataBlock *set_block_buffer(Vector3i bpos, std::shared_ptr<VoxelBufferInternal> &buffer, bool overwrite);
+	VoxelDataBlock *set_empty_block(Vector3i bpos, bool overwrite);
 
 	struct NoAction {
 		inline void operator()(VoxelDataBlock &block) {}
@@ -84,15 +94,8 @@ public:
 	void remove_block(Vector3i bpos, Action_T pre_delete) {
 		auto it = _blocks_map.find(bpos);
 		if (it != _blocks_map.end()) {
-			const unsigned int i = it->second;
-#ifdef DEBUG_ENABLED
-			CRASH_COND(i >= _blocks.size());
-#endif
-			VoxelDataBlock *block = _blocks[i];
-			ERR_FAIL_COND(block == nullptr);
-			pre_delete(*block);
-			memdelete(block);
-			remove_block_internal(bpos, i);
+			pre_delete(it->second);
+			_blocks_map.erase(it);
 		}
 	}
 
@@ -108,23 +111,15 @@ public:
 
 	template <typename Op_T>
 	inline void for_each_block(Op_T op) {
-		for (auto it = _blocks.begin(); it != _blocks.end(); ++it) {
-			VoxelDataBlock *block = *it;
-#ifdef DEBUG_ENABLED
-			CRASH_COND(block == nullptr);
-#endif
-			op(*block);
+		for (auto it = _blocks_map.begin(); it != _blocks_map.end(); ++it) {
+			op(it->first, it->second);
 		}
 	}
 
 	template <typename Op_T>
 	inline void for_each_block(Op_T op) const {
-		for (auto it = _blocks.begin(); it != _blocks.end(); ++it) {
-			const VoxelDataBlock *block = *it;
-#ifdef DEBUG_ENABLED
-			CRASH_COND(block == nullptr);
-#endif
-			op(*block);
+		for (auto it = _blocks_map.begin(); it != _blocks_map.end(); ++it) {
+			op(it->first, it->second);
 		}
 	}
 
@@ -182,10 +177,9 @@ public:
 	}
 
 private:
-	void set_block(Vector3i bpos, VoxelDataBlock *block);
+	//void set_block(Vector3i bpos, VoxelDataBlock *block);
 	VoxelDataBlock *get_or_create_block_at_voxel_pos(Vector3i pos);
 	VoxelDataBlock *create_default_block(Vector3i bpos);
-	void remove_block_internal(Vector3i bpos, unsigned int index);
 
 	void set_block_size_pow2(unsigned int p);
 
@@ -194,11 +188,11 @@ private:
 	FixedArray<uint64_t, VoxelBufferInternal::MAX_CHANNELS> _default_voxel;
 
 	// Blocks stored with a spatial hash in all 3D directions.
+	// This is dual storage: map and vector, for fast lookup and also fast iteration.
 	// Before I used Godot's HashMap with RELATIONSHIP = 2 because that delivers better performance compared to
 	// defaults, but it sometimes has very long stalls on removal, which std::unordered_map doesn't seem to have
 	// (not as badly). Also overall performance is slightly better.
-	std::unordered_map<Vector3i, unsigned int> _blocks_map;
-	std::vector<VoxelDataBlock *> _blocks;
+	std::unordered_map<Vector3i, VoxelDataBlock> _blocks_map;
 
 	// This was a possible optimization in a single-threaded scenario, but it's not in multithread.
 	// We want to be able to do shared read-accesses but this is a mutable variable.
@@ -208,6 +202,7 @@ private:
 	// To prevent too much hashing, this reference is checked before.
 	//mutable VoxelDataBlock *_last_accessed_block = nullptr;
 
+	// This is block size in VOXELS. To convert to space units, use `block_size << lod_index`.
 	unsigned int _block_size;
 	unsigned int _block_size_pow2;
 	unsigned int _block_size_mask;
@@ -226,13 +221,17 @@ struct VoxelDataLodMap {
 	// Each LOD works in a set of coordinates spanning 2x more voxels the higher their index is
 	FixedArray<Lod, constants::MAX_LOD> lods;
 	unsigned int lod_count = 1;
+	VoxelModifierStack modifiers;
 };
 
 // Generates all non-present blocks in preparation for an edit.
 // Every block intersecting with the box at every LOD will be checked.
 // This function runs sequentially and should be thread-safe. May be used if blocks are immediately needed.
 // It will block if other threads are accessing the same data.
-void preload_box(VoxelDataLodMap &data, Box3i voxel_box, VoxelGenerator *generator);
+void preload_box(VoxelDataLodMap &data, Box3i voxel_box, VoxelGenerator *generator, bool is_streaming);
+
+// Clears voxel data from blocks that are pure results of generators and modifiers.
+void clear_cached_blocks_in_voxel_area(VoxelDataLodMap &data, Box3i p_voxel_box);
 
 } // namespace zylann::voxel
 

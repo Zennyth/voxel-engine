@@ -10,19 +10,19 @@ int VoxelDataBlockEnterInfo::_b_get_network_peer_id() const {
 
 Ref<gd::VoxelBuffer> VoxelDataBlockEnterInfo::_b_get_voxels() const {
 	ERR_FAIL_COND_V(voxel_block == nullptr, Ref<gd::VoxelBuffer>());
+	ERR_FAIL_COND_V(!voxel_block->has_voxels(), Ref<gd::VoxelBuffer>());
 	std::shared_ptr<VoxelBufferInternal> vbi = voxel_block->get_voxels_shared();
 	Ref<gd::VoxelBuffer> vb = gd::VoxelBuffer::create_shared(vbi);
 	return vb;
 }
 
 Vector3i VoxelDataBlockEnterInfo::_b_get_position() const {
-	ERR_FAIL_COND_V(voxel_block == nullptr, Vector3i());
-	return voxel_block->position;
+	return block_position;
 }
 
 int VoxelDataBlockEnterInfo::_b_get_lod_index() const {
 	ERR_FAIL_COND_V(voxel_block == nullptr, 0);
-	return voxel_block->lod_index;
+	return voxel_block->get_lod_index();
 }
 
 bool VoxelDataBlockEnterInfo::_b_are_voxels_edited() const {

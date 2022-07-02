@@ -94,16 +94,16 @@ void VoxelServer::wait_and_clear_all_tasks(bool warn) {
 
 	_streaming_thread_pool.dequeue_completed_tasks([warn](zylann::IThreadedTask *task) {
 		if (warn) {
-			WARN_PRINT("Streaming tasks remain on module cleanup, "
-					   "this could become a problem if they reference scripts");
+			ZN_PRINT_WARNING("Streaming tasks remain on module cleanup, "
+							 "this could become a problem if they reference scripts");
 		}
 		memdelete(task);
 	});
 
 	_general_thread_pool.dequeue_completed_tasks([warn](zylann::IThreadedTask *task) {
 		if (warn) {
-			WARN_PRINT("General tasks remain on module cleanup, "
-					   "this could become a problem if they reference scripts");
+			ZN_PRINT_WARNING("General tasks remain on module cleanup, "
+							 "this could become a problem if they reference scripts");
 		}
 		memdelete(task);
 	});
@@ -203,8 +203,9 @@ bool VoxelServer::viewer_exists(uint32_t viewer_id) const {
 	return _world.viewers.is_valid(viewer_id);
 }
 
-void VoxelServer::push_main_thread_time_spread_task(zylann::ITimeSpreadTask *task) {
-	_time_spread_task_runner.push(task);
+void VoxelServer::push_main_thread_time_spread_task(
+		zylann::ITimeSpreadTask *task, TimeSpreadTaskRunner::Priority priority) {
+	_time_spread_task_runner.push(task, priority);
 }
 
 void VoxelServer::push_main_thread_progressive_task(zylann::IProgressiveTask *task) {

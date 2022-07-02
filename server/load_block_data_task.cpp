@@ -1,5 +1,6 @@
 #include "load_block_data_task.h"
 #include "../storage/voxel_buffer_internal.h"
+#include "../util/dstack.h"
 #include "../util/godot/funcs.h"
 #include "../util/log.h"
 #include "../util/profiling.h"
@@ -14,13 +15,14 @@ std::atomic_int g_debug_load_block_tasks_count;
 
 LoadBlockDataTask::LoadBlockDataTask(uint32_t p_volume_id, Vector3i p_block_pos, uint8_t p_lod, uint8_t p_block_size,
 		bool p_request_instances, std::shared_ptr<StreamingDependency> p_stream_dependency,
-		PriorityDependency p_priority_dependency) :
+		PriorityDependency p_priority_dependency, bool generate_cache_data) :
 		_priority_dependency(p_priority_dependency),
 		_position(p_block_pos),
 		_volume_id(p_volume_id),
 		_lod(p_lod),
 		_block_size(p_block_size),
 		_request_instances(p_request_instances),
+		_generate_cache_data(generate_cache_data),
 		//_request_voxels(true),
 		_stream_dependency(p_stream_dependency) {
 	//
@@ -36,6 +38,7 @@ int LoadBlockDataTask::debug_get_running_count() {
 }
 
 void LoadBlockDataTask::run(zylann::ThreadedTaskContext ctx) {
+	ZN_DSTACK();
 	ZN_PROFILE_SCOPE();
 
 	CRASH_COND(_stream_dependency == nullptr);
@@ -60,7 +63,7 @@ void LoadBlockDataTask::run(zylann::ThreadedTaskContext ctx) {
 	if (voxel_query_data.result == VoxelStream::RESULT_ERROR) {
 		ERR_PRINT("Error loading voxel block");
 
-	} else if (voxel_query_data.result == VoxelStream::RESULT_BLOCK_NOT_FOUND) {
+	} else if (voxel_query_data.result == VoxelStream::RESULT_BLOCK_NOT_FOUND && _generate_cache_data) {
 		Ref<VoxelGenerator> generator = _stream_dependency->generator;
 
 		if (generator.is_valid()) {
@@ -74,7 +77,7 @@ void LoadBlockDataTask::run(zylann::ThreadedTaskContext ctx) {
 			task->priority_dependency = _priority_dependency;
 
 			VoxelServer::get_singleton().push_async_task(task);
-			_fallback_on_generator = true;
+			_requested_generator_task = true;
 
 		} else {
 			// If there is no generator... what do we do? What defines the format of that empty block?
@@ -121,7 +124,7 @@ void LoadBlockDataTask::apply_result() {
 		// TODO Comparing pointer may not be guaranteed
 		// The request response must match the dependency it would have been requested with.
 		// If it doesn't match, we are no longer interested in the result.
-		if (_stream_dependency->valid && !_fallback_on_generator) {
+		if (_stream_dependency->valid && !_requested_generator_task) {
 			VoxelServer::BlockDataOutput o;
 			o.voxels = _voxels;
 			o.instances = std::move(_instances);
