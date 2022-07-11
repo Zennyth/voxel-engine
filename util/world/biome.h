@@ -14,9 +14,9 @@ public:
 	Biome();
 
     enum Humidity {
-        HUMIDITY_STICKY,
-		HUMIDITY_HUMID,
-        HUMIDITY_PLEASANT,
+//        HUMIDITY_STICKY = 0,
+		HUMIDITY_HUMID = 0,
+//        HUMIDITY_PLEASANT,
         HUMIDITY_DRY,
         HUMIDITY_COUNT,
 	};
@@ -24,18 +24,17 @@ public:
 	void set_humidity(Humidity _humidity);
 
     enum Temperature {
-        TEMPERATURE_FREEZING,
-		TEMPERATURE_COLD,
-        TEMPERATURE_TEMPERATE,
+        TEMPERATURE_FREEZING = 0,
+//		TEMPERATURE_COLD,
+//        TEMPERATURE_TEMPERATE,
         TEMPERATURE_HOT,
-        TEMPERATURE_BURNING,
+//        TEMPERATURE_BURNING,
         TEMPERATURE_COUNT,
 	};
     Temperature get_temperature() const;
 	void set_temperature(Temperature _temperature);
 
 	uint16_t get_color_at(float offset);
-	bool is_in_range(float temperature, float moisture);
 
 	void set_continentalness(Ref<HeightMap> continentalness);
 	Ref<HeightMap> get_continentalness() const;
@@ -48,13 +47,14 @@ public:
 	Ref<Gradient> get_gradient() const;
 
 	String get_biome_name() const;
+	void set_biome_name(String _biome_name);
 
 
 private:
 	static void _bind_methods();
 
-    Temperature temperature;
-    Humidity humidity;
+    Humidity humidity = HUMIDITY_HUMID;
+	Temperature temperature = TEMPERATURE_FREEZING;
 
 	Ref<HeightMap> _continentalness;
 	Ref<HeightMap> _erosion;
@@ -75,5 +75,8 @@ private:
 };
 
 } // namespace zylann
+
+VARIANT_ENUM_CAST(zylann::Biome::Humidity);
+VARIANT_ENUM_CAST(zylann::Biome::Temperature);
 
 #endif // ZYLANN_BIOME_H

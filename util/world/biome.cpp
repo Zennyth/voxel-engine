@@ -11,11 +11,6 @@ uint16_t Biome::get_color_at(float offset) {
 	return Color8((*_gradient)->get_color_at_offset(offset)).to_u16();
 }
 
-bool Biome::is_in_range(float temperature, float moisture) {
-	return temperature >= _min_temperature && temperature <= _max_temperature && moisture >= _min_moisture && moisture <= _max_moisture;
-}
-
-
 void Biome::set_continentalness(Ref<HeightMap> continentalness) {
 	_continentalness = continentalness;
 	RWLockWrite wlock(_parameters_lock);
@@ -68,6 +63,9 @@ void Biome::set_temperature(Temperature _temperature) {
 String Biome::get_biome_name() const {
 	return _biome_name;
 }
+void Biome::set_biome_name(String biome_name) {
+	_biome_name = biome_name;
+}
 
 void Biome::_bind_methods() {
 
@@ -100,20 +98,24 @@ void Biome::_bind_methods() {
 
 	ADD_GROUP("Conditions of appearance", "");
 
-    BIND_ENUM_CONSTANT(HUMIDITY_STICKY);
+ //   BIND_ENUM_CONSTANT(HUMIDITY_STICKY);
 	BIND_ENUM_CONSTANT(HUMIDITY_HUMID);
-	BIND_ENUM_CONSTANT(HUMIDITY_PLEASANT);
+//	BIND_ENUM_CONSTANT(HUMIDITY_PLEASANT);
 	BIND_ENUM_CONSTANT(HUMIDITY_DRY);
 	BIND_ENUM_CONSTANT(HUMIDITY_COUNT);
-    ADD_PROPERTY(PropertyInfo(Variant::INT, "humidity", PROPERTY_HINT_ENUM, "Sticky,Humid,Pleasant,Dry"), "set_humidity", "get_humidity");
+	ClassDB::bind_method(D_METHOD("set_humidity", "_humidity"), &Biome::set_humidity);
+	ClassDB::bind_method(D_METHOD("get_humidity"), &Biome::get_humidity);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "humidity", PROPERTY_HINT_ENUM, "Humid,Dry"), "set_humidity", "get_humidity");
     
     BIND_ENUM_CONSTANT(TEMPERATURE_FREEZING);
-	BIND_ENUM_CONSTANT(TEMPERATURE_COLD);
-	BIND_ENUM_CONSTANT(TEMPERATURE_TEMPERATE);
+//	BIND_ENUM_CONSTANT(TEMPERATURE_COLD);
+//	BIND_ENUM_CONSTANT(TEMPERATURE_TEMPERATE);
 	BIND_ENUM_CONSTANT(TEMPERATURE_HOT);
-	BIND_ENUM_CONSTANT(TEMPERATURE_BURNING);
+//	BIND_ENUM_CONSTANT(TEMPERATURE_BURNING);
 	BIND_ENUM_CONSTANT(TEMPERATURE_COUNT);
-    ADD_PROPERTY(PropertyInfo(Variant::INT, "temperature", PROPERTY_HINT_ENUM, "Freezing,Cold,Temperate,Hot,Burning"), "set_temperature", "get_temperature");
+	ClassDB::bind_method(D_METHOD("set_temperature", "temperature"), &Biome::set_temperature);
+	ClassDB::bind_method(D_METHOD("get_temperature"), &Biome::get_temperature);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "temperature", PROPERTY_HINT_ENUM, "Freezing,Hot"), "set_temperature", "get_temperature");
 
 }
 

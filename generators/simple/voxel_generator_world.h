@@ -6,6 +6,7 @@
 #include <modules/noise/fastnoise_lite.h>
 #include <modules/voxel/util/world/biome.h>
 #include <modules/voxel/util/world/biome_map.h>
+#include <modules/voxel/util/math/color8.h>
 
 class Curve;
 class Noise;
@@ -54,8 +55,6 @@ public:
 	Result generate_block(VoxelGenerator::VoxelQueryData &input) override;
 
 private:
-	Ref<Biome> get_biome_by(float temperature, float moisture);
-
 	void _on_temperature_noise_changed();
 	void _on_moisture_noise_changed();
 	void _on_continentalness_noise_changed();
@@ -67,12 +66,13 @@ private:
 	VoxelBufferInternal::ChannelId channel = VoxelBufferInternal::CHANNEL_COLOR;
 
 	Array _biomes;
-    HashMap<Humidity, HashMap<Temperature, List<Biome>>> ordered_biomes = {};
+    HashMap<Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> ordered_biomes = {};
 
 	BiomeMap biome_map;
 
     int height = 200;
 	int water_level = 50;
+	int offset = 1;
 
 	const uint64_t ground = Color8(255, 255, 255, 255).to_u16();
 	const uint64_t water = Color8(255, 255, 255, 150).to_u16();
@@ -97,7 +97,7 @@ private:
 	Parameters _parameters;
 	RWLock _parameters_lock;
 
-    float normalize_noise_2d(FastNoiseLite noise, int x, int y, int offest);
+    float normalize_noise_2d(Ref<FastNoiseLite> noise, int x, int y, int offest);
 };
 
 } // namespace zylann::voxel

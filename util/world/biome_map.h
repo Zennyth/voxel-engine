@@ -2,14 +2,20 @@
 #define ZYLANN_BIOME_MAP_H
 
 #include "core/core_bind.h"
-#include <modules/voxel/util/world/biome.h>
 #include <map>
+#include <modules/noise/fastnoise_lite.h>
+#include <modules/voxel/util/world/biome.h>
+
+namespace zylann {
 
 struct BiomeInstance {
   Ref<Biome> biome;
   Vector2 location;
 
-  BiomeInstance() {}
+  BiomeInstance() {
+	  biome = nullptr;
+	  location = Vector2(0, 0);
+  }
 
   BiomeInstance(Ref<Biome> _biome, Vector2 _location) {
     biome = _biome;
@@ -21,7 +27,10 @@ struct WeightedBiomeInstance {
   BiomeInstance *biome_instance;
   float weight;
 
-  WeightedBiomeInstance() {}
+  WeightedBiomeInstance() {
+	  biome_instance = nullptr;
+	  weight = .0;
+  }
 
   WeightedBiomeInstance(BiomeInstance *_biome_instance, float _weight) {
     biome_instance = _biome_instance;
@@ -29,7 +38,6 @@ struct WeightedBiomeInstance {
   }
 };
 
-namespace zylann {
 class BiomeMap {
 public:
 	BiomeMap();
@@ -38,24 +46,26 @@ public:
     void set_temperature_noise(Ref<FastNoiseLite> _temperature_noise);
 	void set_moisture_noise(Ref<FastNoiseLite> _moisture_noise);
 	void set_offset(int _offset);
-    void set_biomes(HashMap<Humidity, HashMap<Temperature, List<Ref<Biome>>>> _biomes);
+    void set_biomes(HashMap<Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> _biomes);
 
     List<WeightedBiomeInstance> get_closest_biomes(Vector2 location);
 
 private:
     Ref<FastNoiseLite> temperature_noise;
 	Ref<FastNoiseLite> moisture_noise;
-    HashMap<Humidity, HashMap<Temperature, List<Ref<Biome>>> biomes;
+	HashMap <Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> biomes;
     int offset = 1;
     int closest_biome_threshold = 1000000;
+	int scale = 1000;
 
-    HashMap<Vector2, List<WeightedBiomeInstance>> biome_map_grid = {};
+    HashMap<Vector2, List<BiomeInstance>> biome_map_grid = {};
 
-    float normalize_noise_2d(FastNoiseLite noise, int x, int y, int offest);
+    float normalize_noise_2d(Ref<FastNoiseLite> noise, int x, int y, int offest);
     Vector2 get_grid_index(Vector2 location);
 	List<Vector2> get_neighboors(Vector2 index);
 	float get_distance(Vector2 point_a, Vector2 point_b);
-	void generate_points(Vector2 index);
+	void generate_biomes(Vector2 index);
+	Ref<Biome> get_biome_by(float temperature, float moisture);
 };
 
 } // namespace zylann

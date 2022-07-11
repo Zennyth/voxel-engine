@@ -16,12 +16,12 @@ void BiomeMap::set_moisture_noise(Ref<FastNoiseLite> _moisture_noise) {
 void BiomeMap::set_offset(int _offset) {
     offset = _offset;
 }
-void BiomeMap::set_biomes(HashMap<Humidity, HashMap<Temperature, List<Biome>>> biomes) {
+void BiomeMap::set_biomes(HashMap<Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> _biomes) {
 	biomes = _biomes;
 }
 
-float BiomeMap::normalize_noise_2d(FastNoiseLite noise, int x, int y, int offest) {
-    return 0.5 + 0.5 * noise.get_noise_2d(x / offest, y / offest);
+float BiomeMap::normalize_noise_2d(Ref<FastNoiseLite> noise, int x, int y, int offest) {
+    return 0.5 + 0.5 * noise->get_noise_2d(x / offest, y / offest);
 }
 
 List<WeightedBiomeInstance> BiomeMap::get_closest_biomes(Vector2 location) {
@@ -37,13 +37,13 @@ List<WeightedBiomeInstance> BiomeMap::get_closest_biomes(Vector2 location) {
 			generate_biomes(cell_index);
 		}
 
-		List<BiomeInstance> biome_instances = world_grid[cell_index];
-		for (const BiomeInstance &biome_instance : biome_instances) {
+		List<BiomeInstance> biome_instances = biome_map_grid[cell_index];
+		for (BiomeInstance &biome_instance : biome_instances) {
 			float distance = get_distance(location, biome_instance.location);
 			float normalized_distance = sqrt(distance);
 
-			if (distance < border_threshold) {
-				WeightedBiomeInstance res = WeightedBiomeInstance(&biome_instance, pow(border_threshold - distance, 2.0));
+			if (distance < closest_biome_threshold) {
+				WeightedBiomeInstance res = WeightedBiomeInstance(&biome_instance, pow(closest_biome_threshold - distance, 2.0));
 				closest_biomes.push_back(res);
 				total_weight += res.weight;
 			}
@@ -78,11 +78,11 @@ float BiomeMap::get_distance(Vector2 point_a, Vector2 point_b) {
 	return pow(point_a.x - point_b.x, 2.0) + pow(point_a.y - point_b.y, 2.0);
 }
 
-void BiomeMap::generate_points(Vector2 index) {
+void BiomeMap::generate_biomes(Vector2 index) {
 	List<BiomeInstance> biome_instances = {};
 
-    float temperature = normalize_noise_2d(temperature_noise, x, y, 1);
-    float moisture = normalize_noise_2d(moisture_noise, x, y, 1);
+    float temperature = normalize_noise_2d(temperature_noise, index.x, index.y, 1);
+    float moisture = normalize_noise_2d(moisture_noise, index.x, index.y, 1);
 
 	int min_x = index.x * scale;
 	int max_x = (index.x + 1) * scale - 1;
@@ -98,8 +98,8 @@ void BiomeMap::generate_points(Vector2 index) {
 }
 
 Ref<Biome> BiomeMap::get_biome_by(float temperature, float moisture) {
-	Temperature temperature_category = (Temperature)floor(temperature * TEMPERATURE_COUNT);
-	Humidity humidity_category = (Humidity)floor(moisture * HUMIDITY_COUNT);
+	Biome::Temperature temperature_category = (Biome::Temperature)floor(temperature * Biome::TEMPERATURE_COUNT);
+	Biome::Humidity humidity_category = (Biome::Humidity)floor(moisture * Biome::HUMIDITY_COUNT);
 
 	return biomes[humidity_category][temperature_category][0];
 }

@@ -47,6 +47,7 @@
 #include "util/world/biome.h"
 #include "util/world/height_map.h"
 #include "util/world/border.h"
+#include "util/world/biome_map.h"
 
 #ifdef VOXEL_ENABLE_FAST_NOISE_2
 #include "util/noise/fast_noise_2.h"

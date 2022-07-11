@@ -1,11 +1,10 @@
-#include "voxel_generator_world.h"
 #include <core/config/engine.h>
 #include <core/core_string_names.h>
 #include <modules/noise/fastnoise_lite.h>
-#include <modules/voxel/util/math/color8.h>
 #include <scene/resources/curve.h>
-
 #include <scene\resources\gradient.h>
+
+#include "voxel_generator_world.h"
 
 namespace zylann::voxel {
 VoxelGeneratorWorld::VoxelGeneratorWorld() {
@@ -14,8 +13,8 @@ VoxelGeneratorWorld::VoxelGeneratorWorld() {
 
 VoxelGeneratorWorld::~VoxelGeneratorWorld() {}
 
-float VoxelGeneratorWorld::normalize_noise_2d(FastNoiseLite noise, int x, int y, int offest) {
-    return 0.5 + 0.5 * noise.get_noise_2d(x / offest, y / offest);
+float VoxelGeneratorWorld::normalize_noise_2d(Ref<FastNoiseLite> noise, int x, int y, int offest) {
+    return 0.5 + 0.5 * noise->get_noise_2d(x / offest, y / offest);
 }
 
 void VoxelGeneratorWorld::set_temperature_noise(Ref<FastNoiseLite> temperature_noise) {
@@ -169,16 +168,21 @@ void VoxelGeneratorWorld::set_biomes(Array biomes) {
 	_biomes = biomes;
     ordered_biomes = {};
 
-    for (Biome const &biome : _biomes) {
-        if(!ordered_biomes.has(biome.humidity)) {
-            ordered_biomes[biome.humidity] = {};
+    for (int i = 0; i < _biomes.size(); ++i) {
+		Ref<Biome> biome{ Object::cast_to<Biome>(_biomes[i]) };
+
+		Biome::Humidity humidity = biome->get_humidity();
+		Biome::Temperature temperature = biome->get_temperature();
+
+        if(!ordered_biomes.has(humidity)) {
+            ordered_biomes[humidity] = {};
         }
 
-        if(!ordered_biomes[biome.humidity].has(biome.temperature)) {
-            ordered_biomes[biome.humidity][biome.temperature] = {};
+        if(!ordered_biomes[humidity].has(temperature)) {
+            ordered_biomes[humidity][temperature] = {};
         }
 
-        ordered_biomes[biome.humidity][biome.temperature].push_back(biome);
+        ordered_biomes[humidity][temperature].push_back(biome);
     }
 
     biome_map.set_biomes(ordered_biomes);
@@ -206,9 +210,6 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 
 	FastNoiseLite &temperature_noise = **params.temperature_noise;
 	FastNoiseLite &moisture_noise = **params.moisture_noise;
-	FastNoiseLite &continentalness_noise = **params.continentalness_noise;
-	FastNoiseLite &peaks_and_valleys_noise = **params.peaks_and_valleys_noise;
-	FastNoiseLite &erosion_noise = **params.erosion_noise;
 
 	VoxelBufferInternal &out_buffer = input.voxel_buffer;
 	out_buffer.set_channel_depth(channel, VoxelBufferInternal::DEPTH_16_BIT);
@@ -239,21 +240,21 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 
 		for (int x = 0; x < bs.x; ++x, gx += stride) {
 			// terrain shape
-			float continentalness = normalize_noise_2d(continentalness_noise, gx, gz, offest);
-			float peaks_and_valleys = normalize_noise_2d(peaks_and_valleys_noise, gx, gz, offest);
-			float erosion = normalize_noise_2d(erosin_noise, gx, gz, offest);
+			float continentalness = normalize_noise_2d(params.continentalness_noise, gx, gz, offset);
+			float peaks_and_valleys = normalize_noise_2d(params.peaks_and_valleys_noise, gx, gz, offset);
+			float erosion = normalize_noise_2d(params.erosion_noise, gx, gz, offset);
 
             List<WeightedBiomeInstance> weighted_biomes = biome_map.get_closest_biomes(Vector2(gx, gz));
             WeightedBiomeInstance *current_biome = nullptr;
 
             float h = 0;
-            for (WeightedBiomeInstance const &weighted_biome : weighted_biomes) {
+            for (WeightedBiomeInstance &weighted_biome : weighted_biomes) {
                 float normalized_height_map = 
-                    weighted_biome->biome_instance->biome->get_continentalness()->get_height_at(continentalness) +
-					weighted_biome->biome_instance->biome->get_peaks_and_valleys()->get_height_at(peaks_and_valleys) +
-					weighted_biome->biome_instance->biome->get_erosion()->get_height_at(erosion);
+                    weighted_biome.biome_instance->biome->get_continentalness()->get_height_at(continentalness) +
+					weighted_biome.biome_instance->biome->get_peaks_and_valleys()->get_height_at(peaks_and_valleys) +
+					weighted_biome.biome_instance->biome->get_erosion()->get_height_at(erosion);
                 
-                if(current_biome == nullptr || current_biome.weight < weighted_biome.weight)
+                if(current_biome == nullptr || current_biome->weight < weighted_biome.weight)
                     current_biome = &weighted_biome;
 
 				h += normalized_height_map * height * weighted_biome.weight;
@@ -281,7 +282,7 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 			}
 
 			if (ih > 0) {
-                ih = min(ih, bs.y);
+                ih = math::min(ih, bs.y);
 
 				out_buffer.fill_area(
                     current_biome->biome_instance->biome->get_color_at(continentalness), 
@@ -371,7 +372,7 @@ void VoxelGeneratorWorld::set_water_level(int new_water_level) {
 int VoxelGeneratorWorld::get_offset() const {
 	return offset;
 }
-void VoxelGeneratorWorld::set_water_level(int new_offset) {
+void VoxelGeneratorWorld::set_offset(int new_offset) {
 	offset = math::clamp(new_offset, MIN_OFFSET, MAX_OFFEST);
 }
 
