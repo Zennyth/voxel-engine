@@ -39,11 +39,11 @@ List<WeightedBiomeInstance> BiomeMap::get_closest_biomes(Vector2 location) {
 
 		List<BiomeInstance> biome_instances = world_grid[cell_index];
 		for (const BiomeInstance &biome_instance : biome_instances) {
-			float distance = get_distance(location, biome_instance->location);
+			float distance = get_distance(location, biome_instance.location);
 			float normalized_distance = sqrt(distance);
 
 			if (distance < border_threshold) {
-				WeightedBiomeInstance res = WeightedBiomeInstance(biome_instance, pow(border_threshold - distance, 2.0));
+				WeightedBiomeInstance res = WeightedBiomeInstance(&biome_instance, pow(border_threshold - distance, 2.0));
 				closest_biomes.push_back(res);
 				total_weight += res.weight;
 			}
@@ -92,9 +92,7 @@ void BiomeMap::generate_points(Vector2 index) {
 	int x = temperature * (max_x - min_x + 1) + min_x;
 	int y = moisture * (max_y - min_y + 1) + min_y;
 
-    BiomeInstance new_biome_instance = BiomeInstance(get_biome_by(temperature, moisture), Vector2(x, y));
-
-	biome_instances.push_back(new_biome_instance);
+	biome_instances.push_back(BiomeInstance(get_biome_by(temperature, moisture), Vector2(x, y)));
 
 	biome_map_grid[index] = biome_instances;
 }

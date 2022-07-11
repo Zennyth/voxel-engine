@@ -253,10 +253,10 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 					weighted_biome->biome_instance->biome->get_peaks_and_valleys()->get_height_at(peaks_and_valleys) +
 					weighted_biome->biome_instance->biome->get_erosion()->get_height_at(erosion);
                 
-                if(current_biome == nullptr || current_biome->weight < weighted_biome->weight)
+                if(current_biome == nullptr || current_biome.weight < weighted_biome.weight)
                     current_biome = &weighted_biome;
 
-				h += normalized_height_map * height * weighted_biome->weight;
+				h += normalized_height_map * height * weighted_biome.weight;
             }
 
 			h -= origin.y;

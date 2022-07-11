@@ -6,24 +6,24 @@
 #include <map>
 
 struct BiomeInstance {
-  Biome biome;
-  Vector2i location;
+  Ref<Biome> biome;
+  Vector2 location;
 
   BiomeInstance() {}
 
-  BiomeInstance(Biome _biome, Vector2i _location) {
+  BiomeInstance(Ref<Biome> _biome, Vector2 _location) {
     biome = _biome;
     location = _location;
   }
 };
 
 struct WeightedBiomeInstance {
-  BiomeInstance biome_instance;
+  BiomeInstance *biome_instance;
   float weight;
 
   WeightedBiomeInstance() {}
 
-  WeightedBiomeInstance(BiomeInstance _biome_instance, float _weight) {
+  WeightedBiomeInstance(BiomeInstance *_biome_instance, float _weight) {
     biome_instance = _biome_instance;
     weight = _weight;
   }
@@ -38,14 +38,14 @@ public:
     void set_temperature_noise(Ref<FastNoiseLite> _temperature_noise);
 	void set_moisture_noise(Ref<FastNoiseLite> _moisture_noise);
 	void set_offset(int _offset);
-    void set_biomes(HashMap<Humidity, HashMap<Temperature, List<Biome>>> _biomes);
+    void set_biomes(HashMap<Humidity, HashMap<Temperature, List<Ref<Biome>>>> _biomes);
 
     List<WeightedBiomeInstance> get_closest_biomes(Vector2 location);
 
 private:
     Ref<FastNoiseLite> temperature_noise;
 	Ref<FastNoiseLite> moisture_noise;
-    HashMap<Humidity, HashMap<Temperature, List<Biome>> biomes;
+    HashMap<Humidity, HashMap<Temperature, List<Ref<Biome>>> biomes;
     int offset = 1;
     int closest_biome_threshold = 1000000;
 
