@@ -9,24 +9,13 @@
 
 namespace zylann::voxel {
 VoxelGeneratorWorld::VoxelGeneratorWorld() {
-	border_delimeter = CellNoise();
+    biome_map = BiomeMap();
 }
 
 VoxelGeneratorWorld::~VoxelGeneratorWorld() {}
 
-Ref<Biome> VoxelGeneratorWorld::get_biome_by(float temperature, float moisture) {
-	// fallback to default if no biome meets the requirements
-	Ref<Biome> biome_ref{ Object::cast_to<Biome>(_biomes[0]) };
-
-	for (int i = 0; i < _biomes.size(); ++i) {
-		Ref<Biome> biome_new_ref{ Object::cast_to<Biome>(_biomes[i]) };
-		if (biome_new_ref.ptr()->is_in_range(temperature, moisture)) {
-			biome_ref = biome_new_ref;
-			break;
-		}
-	}
-
-	return biome_ref;
+float VoxelGeneratorWorld::normalize_noise_2d(FastNoiseLite noise, int x, int y, int offest) {
+    return 0.5 + 0.5 * noise.get_noise_2d(x / offest, y / offest);
 }
 
 void VoxelGeneratorWorld::set_temperature_noise(Ref<FastNoiseLite> temperature_noise) {
@@ -53,6 +42,7 @@ void VoxelGeneratorWorld::_on_temperature_noise_changed() {
 	ERR_FAIL_COND(_temperature_noise.is_null());
 	RWLockWrite wlock(_parameters_lock);
 	_parameters.temperature_noise = _temperature_noise->duplicate();
+    biome_map.set_temperature_noise(_temperature_noise->duplicate());
 }
 Ref<FastNoiseLite> VoxelGeneratorWorld::get_temperature_noise() const {
 	return _temperature_noise;
@@ -82,6 +72,7 @@ void VoxelGeneratorWorld::_on_moisture_noise_changed() {
 	ERR_FAIL_COND(_moisture_noise.is_null());
 	RWLockWrite wlock(_parameters_lock);
 	_parameters.moisture_noise = _moisture_noise->duplicate();
+    biome_map.set_moisture_noise(_moisture_noise->duplicate());
 }
 Ref<FastNoiseLite> VoxelGeneratorWorld::get_moisture_noise() const {
 	return _moisture_noise;
@@ -176,6 +167,7 @@ Ref<FastNoiseLite> VoxelGeneratorWorld::get_erosion_noise() const {
 
 void VoxelGeneratorWorld::set_biomes(Array biomes) {
 	_biomes = biomes;
+    biome_map.set_biomes(biomes)
 	emit_changed();
 }
 Array VoxelGeneratorWorld::get_biomes() const {
@@ -211,13 +203,6 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 	const Vector3i bs = out_buffer.get_size();
 	const float margin = 1 << input.lod;
 	const int lod = input.lod;
-	const int offest = 1;
-
-	const int height = 200;
-	const Color8 ground = Color8(255, 255, 255, 255);
-
-	const int water_level = 50;
-	const Color8 water = Color8(255, 255, 255, 150);
 
 	if (origin.y > height + margin) {
 		// The bottom of the block is above the highest ground can go (default is air)
@@ -226,7 +211,7 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 	}
 	if (origin.y + (bs.y << lod) < 0) {
 		// The top of the block is below the lowest ground can go
-		out_buffer.clear_channel(channel, ground.to_u16());
+		out_buffer.clear_channel(channel, ground);
 		result.max_lod_hint = true;
 		return result;
 	}
@@ -240,67 +225,25 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 
 		for (int x = 0; x < bs.x; ++x, gx += stride) {
 			// terrain shape
-			float noise_continentalness = 0.5 + 0.5 * continentalness_noise.get_noise_2d(gx / offest, gz / offest);
-			float noise_peaks_and_valleys = 0.5 + 0.5 * peaks_and_valleys_noise.get_noise_2d(gx / offest, gz / offest);
-			float noise_erosion = 0.5 + 0.5 * erosion_noise.get_noise_2d(gx / offest, gz / offest);
+			float continentalness = normalize_noise_2d(continentalness_noise, gx, gz, offest);
+			float peaks_and_valleys = normalize_noise_2d(peaks_and_valleys_noise, gx, gz, offest);
+			float erosion = normalize_noise_2d(erosin_noise, gx, gz, offest);
 
-			ClosestPointsResult cell_noise = border_delimeter.get_closest_result(Vector2(gx, gz));
-			Vector2 current_biome_center = cell_noise.closest.location;
-			// biome selection
-			float current_noise_temperature =
-					0.5 + 0.5 * temperature_noise.get_noise_2d(current_biome_center.x, current_biome_center.y);
-			float current_noise_moisture =
-					0.5 + 0.5 * moisture_noise.get_noise_2d(current_biome_center.x, current_biome_center.y);
+            List<WeightedBiomeInstance> weighted_biomes = biome_map.get_closest_biomes(Vector2(gx, gz));
+            WeightedBiomeInstance *current_biome = nullptr;
 
-			// fallback to default if no biome meets the requirements
-			Ref<Biome> current_biome_ref{ Object::cast_to<Biome>(_biomes[0]) };
-			for (int i = 0; i < _biomes.size(); ++i) {
-				Ref<Biome> current_biome_new_ref{ Object::cast_to<Biome>(_biomes[i]) };
-				if (current_biome_new_ref->is_in_range(current_noise_temperature, current_noise_moisture)) {
-					current_biome_ref = current_biome_new_ref;
-					break;
-				}
-			}
-			Biome &current_biome = **current_biome_ref;
+            float h = 0;
+            for (WeightedBiomeInstance const &weighted_biome : weighted_biomes) {
+                float normalized_height_map = 
+                    weighted_biome->biome_instance->biome->get_continentalness()->get_height_at(continentalness) +
+					weighted_biome->biome_instance->biome->get_peaks_and_valleys()->get_height_at(peaks_and_valleys) +
+					weighted_biome->biome_instance->biome->get_erosion()->get_height_at(erosion);
+                
+                if(current_biome == nullptr || current_biome->weight < weighted_biome->weight)
+                    current_biome = &weighted_biome;
 
-
-			float h = 0;
-
-			if (cell_noise.under_threshold.size() > 1) {
-				for (PointResult const &biome_center : cell_noise.under_threshold) {
-					Vector2 closest_biome_center = biome_center.location;
-					// biome selection
-					float noise_temperature =
-							0.5 + 0.5 * temperature_noise.get_noise_2d(closest_biome_center.x, closest_biome_center.y);
-					float noise_moisture =
-							0.5 + 0.5 * moisture_noise.get_noise_2d(closest_biome_center.x, closest_biome_center.y);
-
-					// fallback to default if no biome meets the requirements
-					Ref<Biome> biome_ref{ Object::cast_to<Biome>(_biomes[0]) };
-					for (int i = 0; i < _biomes.size(); ++i) {
-						Ref<Biome> biome_new_ref{ Object::cast_to<Biome>(_biomes[i]) };
-						if (biome_new_ref->is_in_range(noise_temperature, noise_moisture)) {
-							biome_ref = biome_new_ref;
-							break;
-						}
-					}
-					Biome &biome = **biome_ref;
-
-					// Output is blocky, so we can go for just one sample
-					float normalized_height_map = biome.get_continentalness()->get_height_at(noise_continentalness) +
-							biome.get_peaks_and_valleys()->get_height_at(noise_peaks_and_valleys) +
-							biome.get_erosion()->get_height_at(noise_erosion);
-
-					h += normalized_height_map * height * biome_center.weight;
-				}
-			} else {
-				// Output is blocky, so we can go for just one sample
-				float normalized_height_map = current_biome.get_continentalness()->get_height_at(noise_continentalness) +
-						current_biome.get_peaks_and_valleys()->get_height_at(noise_peaks_and_valleys) +
-						current_biome.get_erosion()->get_height_at(noise_erosion);
-
-				h = normalized_height_map * height;
-			}
+				h += normalized_height_map * height * weighted_biome->weight;
+            }
 
 			h -= origin.y;
 			int ih = int(h) >> lod;
@@ -316,20 +259,22 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 					fill_level = water_level - origin.y - 1;
 				}
 
-				// int fill_level = bs.y;
-				out_buffer.fill_area(water.to_u16(), Vector3i(x, start_relative_height, z),
-						Vector3i(x + 1, fill_level, z + 1), channel);
+				out_buffer.fill_area(
+                    water, 
+                    Vector3i(x, start_relative_height, z), Vector3i(x + 1, fill_level, z + 1), 
+                    channel
+                );
 			}
 
 			if (ih > 0) {
-				if (ih > bs.y) {
-					ih = bs.y;
-				}
+                ih = min(ih, bs.y);
 
-				out_buffer.fill_area(current_biome.get_color_at(noise_continentalness), Vector3i(x, 0, z),
-						Vector3i(x + 1, ih, z + 1), channel);
+				out_buffer.fill_area(
+                    current_biome->biome_instance->biome->get_color_at(continentalness), 
+                    Vector3i(x, 0, z), Vector3i(x + 1, ih, z + 1), 
+                    channel
+                );
 			}
-
 		} // for x
 	} // for z
 
@@ -338,13 +283,14 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 }
 
 void VoxelGeneratorWorld::_bind_methods() {
+    ADD_GROUP("Biomes", "");
 	ClassDB::bind_method(D_METHOD("set_biomes", "biomes"), &VoxelGeneratorWorld::set_biomes);
 	ClassDB::bind_method(D_METHOD("get_biomes"), &VoxelGeneratorWorld::get_biomes);
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "biomes", PROPERTY_HINT_ARRAY_TYPE, "RESOURCE"), "set_biomes", "get_biomes");
 
-	ADD_GROUP("Temperature and Moisture", "");
-	ClassDB::bind_method(
-			D_METHOD("set_temperature_noise", "temperature_noise"), &VoxelGeneratorWorld::set_temperature_noise);
+
+	ADD_GROUP("Biome Map", "");
+	ClassDB::bind_method(D_METHOD("set_temperature_noise", "temperature_noise"), &VoxelGeneratorWorld::set_temperature_noise);
 	ClassDB::bind_method(D_METHOD("get_temperature_noise"), &VoxelGeneratorWorld::get_temperature_noise);
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "temperature_noise", PROPERTY_HINT_RESOURCE_TYPE,
 						 FastNoiseLite::get_class_static(),
@@ -357,9 +303,19 @@ void VoxelGeneratorWorld::_bind_methods() {
 						 PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_EDITOR_INSTANTIATE_OBJECT),
 			"set_moisture_noise", "get_moisture_noise");
 
-	ADD_GROUP("Height", "");
-	ClassDB::bind_method(D_METHOD("set_continentalness_noise", "continentalness_noise"),
-			&VoxelGeneratorWorld::set_continentalness_noise);
+
+	ADD_GROUP("Terrain", "");
+    ClassDB::bind_method(D_METHOD("set_height", "new_height"), &VoxelGeneratorWorld::set_height);
+	ClassDB::bind_method(D_METHOD("get_height"), &VoxelGeneratorWorld::get_height);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "height", PROPERTY_HINT_RANGE, String("{0},{1},1").format(varray(MIN_HEIGHT, MAX_HEIGHT))), "set_height", "get_height");
+    ClassDB::bind_method(D_METHOD("set_water_level", "new_water_level"), &VoxelGeneratorWorld::set_water_level);
+	ClassDB::bind_method(D_METHOD("get_water_level"), &VoxelGeneratorWorld::get_water_level);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "water_level", PROPERTY_HINT_RANGE, String("{0},{1},1").format(varray(MIN_WATER_LEVEL, MAX_WATER_LEVEL))), "set_water_level", "get_water_level");
+    ClassDB::bind_method(D_METHOD("set_offset", "new_offset"), &VoxelGeneratorWorld::set_offset);
+	ClassDB::bind_method(D_METHOD("get_offset"), &VoxelGeneratorWorld::get_offset);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "offset", PROPERTY_HINT_RANGE, String("{0},{1},1").format(varray(MIN_OFFSET, MAX_OFFEST))), "set_offset", "get_offset");
+    
+	ClassDB::bind_method(D_METHOD("set_continentalness_noise", "continentalness_noise"), &VoxelGeneratorWorld::set_continentalness_noise);
 	ClassDB::bind_method(D_METHOD("get_continentalness_noise"), &VoxelGeneratorWorld::get_continentalness_noise);
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "continentalness_noise", PROPERTY_HINT_RESOURCE_TYPE,
 						 FastNoiseLite::get_class_static(),
@@ -382,6 +338,27 @@ void VoxelGeneratorWorld::_bind_methods() {
 
 VoxelBufferInternal::ChannelId VoxelGeneratorWorld::get_channel() const {
 	return channel;
+}
+
+int VoxelGeneratorWorld::get_height() const {
+	return height;
+}
+void VoxelGeneratorWorld::set_height(int new_height) {
+	height = math::clamp(new_height, MIN_HEIGHT, MAX_HEIGHT);
+}
+
+int VoxelGeneratorWorld::get_water_level() const {
+	return water_level;
+}
+void VoxelGeneratorWorld::set_water_level(int new_water_level) {
+	water_level = math::clamp(new_water_level, MIN_WATER_LEVEL, MAX_WATER_LEVEL);
+}
+
+int VoxelGeneratorWorld::get_offset() const {
+	return offset;
+}
+void VoxelGeneratorWorld::set_water_level(int new_offset) {
+	offset = math::clamp(new_offset, MIN_OFFSET, MAX_OFFEST);
 }
 
 } // namespace zylann::voxel
