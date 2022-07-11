@@ -67,6 +67,8 @@ private:
 	VoxelBufferInternal::ChannelId channel = VoxelBufferInternal::CHANNEL_COLOR;
 
 	Array _biomes;
+    HashMap<Humidity, HashMap<Temperature, List<Biome>>> ordered_biomes = {};
+
 	BiomeMap biome_map;
 
     int height = 200;

@@ -16,7 +16,7 @@ void BiomeMap::set_moisture_noise(Ref<FastNoiseLite> _moisture_noise) {
 void BiomeMap::set_offset(int _offset) {
     offset = _offset;
 }
-void BiomeMap::set_biomes(Array biomes) {
+void BiomeMap::set_biomes(HashMap<Humidity, HashMap<Temperature, List<Biome>>> biomes) {
 	biomes = _biomes;
 }
 
@@ -100,17 +100,9 @@ void BiomeMap::generate_points(Vector2 index) {
 }
 
 Ref<Biome> BiomeMap::get_biome_by(float temperature, float moisture) {
-	// fallback to default if no biome meets the requirements
-	Ref<Biome> biome_ref { Object::cast_to<Biome>(biomes[0]) };
+	Temperature temperature_category = (Temperature)floor(temperature * TEMPERATURE_COUNT);
+	Humidity humidity_category = (Humidity)floor(moisture * HUMIDITY_COUNT);
 
-	for (int i = 0; i < biomes.size(); ++i) {
-		Ref<Biome> biome_new_ref{ Object::cast_to<Biome>(biomes[i]) };
-		if (biome_new_ref->is_in_range(temperature, moisture)) {
-			biome_ref = biome_new_ref;
-			break;
-		}
-	}
-
-	return biome_ref;
+	return biomes[humidity_category][temperature_category][0];
 }
 } //namespace zylann

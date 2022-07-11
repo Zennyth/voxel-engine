@@ -167,7 +167,21 @@ Ref<FastNoiseLite> VoxelGeneratorWorld::get_erosion_noise() const {
 
 void VoxelGeneratorWorld::set_biomes(Array biomes) {
 	_biomes = biomes;
-    biome_map.set_biomes(biomes)
+    ordered_biomes = {};
+
+    for (Biome const &biome : _biomes) {
+        if(!ordered_biomes.has(biome.humidity)) {
+            ordered_biomes[biome.humidity] = {};
+        }
+
+        if(!ordered_biomes[biome.humidity].has(biome.temperature)) {
+            ordered_biomes[biome.humidity][biome.temperature] = {};
+        }
+
+        ordered_biomes[biome.humidity][biome.temperature].push_back(biome);
+    }
+
+    biome_map.set_biomes(ordered_biomes);
 	emit_changed();
 }
 Array VoxelGeneratorWorld::get_biomes() const {

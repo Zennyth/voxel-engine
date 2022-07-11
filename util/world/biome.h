@@ -13,6 +13,27 @@ class Biome : public Resource {
 public:
 	Biome();
 
+    enum Humidity {
+        HUMIDITY_STICKY,
+		HUMIDITY_HUMID,
+        HUMIDITY_PLEASANT,
+        HUMIDITY_DRY,
+        HUMIDITY_COUNT,
+	};
+    Humidity get_humidity() const;
+	void set_humidity(Humidity _humidity);
+
+    enum Temperature {
+        TEMPERATURE_FREEZING,
+		TEMPERATURE_COLD,
+        TEMPERATURE_TEMPERATE,
+        TEMPERATURE_HOT,
+        TEMPERATURE_BURNING,
+        TEMPERATURE_COUNT,
+	};
+    Temperature get_temperature() const;
+	void set_temperature(Temperature _temperature);
+
 	uint16_t get_color_at(float offset);
 	bool is_in_range(float temperature, float moisture);
 
@@ -26,30 +47,20 @@ public:
 	void set_gradient(Ref<Gradient> gradient);
 	Ref<Gradient> get_gradient() const;
 
-	void set_min_temperature(float min_temperature);
-	float get_min_temperature() const;
-	void set_max_temperature(float max_temperature);
-	float get_max_temperature() const;
-	void set_min_moisture(float min_moisture);
-	float get_min_moisture() const;
-	void set_max_moisture(float max_moisture);
-	float get_max_moisture() const;
-	void set_biome_name(String biome_name);
 	String get_biome_name() const;
 
 
 private:
 	static void _bind_methods();
 
+    Temperature temperature;
+    Humidity humidity;
+
 	Ref<HeightMap> _continentalness;
 	Ref<HeightMap> _erosion;
 	Ref<HeightMap> _peaks_and_valleys;
 	Ref<Gradient> _gradient;
 
-	float _min_temperature = 0;
-	float _max_temperature = 1;
-	float _min_moisture = 0;
-	float _max_moisture = 1;
 	String _biome_name = "";
 
     struct Parameters {

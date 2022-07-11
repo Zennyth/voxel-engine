@@ -50,53 +50,21 @@ Ref<Gradient> Biome::get_gradient() const {
 	return _gradient;
 }
 
-void Biome::set_min_temperature(float min_temperature) {
-	if (_min_temperature == min_temperature) {
-		return;
-	}
-	_min_temperature = min_temperature;
-	emit_changed();
+Biome::Humidity Biome::get_humidity() const {
+	return humidity;
 }
-float Biome::get_min_temperature() const {
-	return _min_temperature;
+void Biome::set_humidity(Humidity _humidity) {
+	ERR_FAIL_INDEX(_humidity, HUMIDITY_COUNT);
+	humidity = _humidity;
 }
-void Biome::set_max_temperature(float max_temperature) {
-	if (_max_temperature == max_temperature) {
-		return;
-	}
-	_max_temperature = max_temperature;
-	emit_changed();
+Biome::Temperature Biome::get_temperature() const {
+	return temperature;
 }
-float Biome::get_max_temperature() const {
-	return _max_temperature;
+void Biome::set_temperature(Temperature _temperature) {
+	ERR_FAIL_INDEX(_temperature, TEMPERATURE_COUNT);
+	temperature = _temperature;
 }
-void Biome::set_min_moisture(float min_moisture) {
-	if (_min_moisture == min_moisture) {
-		return;
-	}
-	_min_moisture = min_moisture;
-	emit_changed();
-}
-float Biome::get_min_moisture() const {
-	return _min_moisture;
-}
-void Biome::set_max_moisture(float max_moisture) {
-	if (_max_moisture == max_moisture) {
-		return;
-	}
-	_max_moisture = max_moisture;
-	emit_changed();
-}
-float Biome::get_max_moisture() const {
-	return _max_moisture;
-}
-void Biome::set_biome_name(String biome_name) {
-	if (_biome_name == biome_name) {
-		return;
-	}
-	_biome_name = biome_name;
-	emit_changed();
-}
+
 String Biome::get_biome_name() const {
 	return _biome_name;
 }
@@ -132,19 +100,20 @@ void Biome::_bind_methods() {
 
 	ADD_GROUP("Conditions of appearance", "");
 
-	ClassDB::bind_method(D_METHOD("set_min_temperature", "min_temperature"), &Biome::set_min_temperature);
-	ClassDB::bind_method(D_METHOD("get_min_temperature"), &Biome::get_min_temperature);
-	ClassDB::bind_method(D_METHOD("set_max_temperature", "min_temperature"), &Biome::set_max_temperature);
-	ClassDB::bind_method(D_METHOD("get_max_temperature"), &Biome::get_max_temperature);
-	ClassDB::bind_method(D_METHOD("set_min_moisture", "min_moisture"), &Biome::set_min_moisture);
-	ClassDB::bind_method(D_METHOD("get_min_moisture"), &Biome::get_min_moisture);
-	ClassDB::bind_method(D_METHOD("set_max_moisture", "min_moisture"), &Biome::set_max_moisture);
-	ClassDB::bind_method(D_METHOD("get_max_moisture"), &Biome::get_max_moisture);
-
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "min_temperature", PROPERTY_HINT_RANGE, "0.0001,10000.0,0.1,exp"), "set_min_temperature", "get_min_temperature");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_temperature", PROPERTY_HINT_RANGE, "0.0001,10000.0,0.1,exp"), "set_max_temperature", "get_max_temperature");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "min_moisture", PROPERTY_HINT_RANGE, "0.0001,10000.0,0.1,exp"), "set_min_moisture", "get_min_moisture");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_moisture", PROPERTY_HINT_RANGE, "0.0001,10000.0,0.1,exp"), "set_max_moisture", "get_max_moisture");
+    BIND_ENUM_CONSTANT(HUMIDITY_STICKY);
+	BIND_ENUM_CONSTANT(HUMIDITY_HUMID);
+	BIND_ENUM_CONSTANT(HUMIDITY_PLEASANT);
+	BIND_ENUM_CONSTANT(HUMIDITY_DRY);
+	BIND_ENUM_CONSTANT(HUMIDITY_COUNT);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "humidity", PROPERTY_HINT_ENUM, "Sticky,Humid,Pleasant,Dry"), "set_humidity", "get_humidity");
+    
+    BIND_ENUM_CONSTANT(TEMPERATURE_FREEZING);
+	BIND_ENUM_CONSTANT(TEMPERATURE_COLD);
+	BIND_ENUM_CONSTANT(TEMPERATURE_TEMPERATE);
+	BIND_ENUM_CONSTANT(TEMPERATURE_HOT);
+	BIND_ENUM_CONSTANT(TEMPERATURE_BURNING);
+	BIND_ENUM_CONSTANT(TEMPERATURE_COUNT);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "temperature", PROPERTY_HINT_ENUM, "Freezing,Cold,Temperate,Hot,Burning"), "set_temperature", "get_temperature");
 
 }
 

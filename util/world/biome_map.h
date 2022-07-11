@@ -38,14 +38,14 @@ public:
     void set_temperature_noise(Ref<FastNoiseLite> _temperature_noise);
 	void set_moisture_noise(Ref<FastNoiseLite> _moisture_noise);
 	void set_offset(int _offset);
-    void set_biomes(Array _biomes);
+    void set_biomes(HashMap<Humidity, HashMap<Temperature, List<Biome>>> _biomes);
 
     List<WeightedBiomeInstance> get_closest_biomes(Vector2 location);
 
 private:
     Ref<FastNoiseLite> temperature_noise;
 	Ref<FastNoiseLite> moisture_noise;
-    Array biomes;
+    HashMap<Humidity, HashMap<Temperature, List<Biome>> biomes;
     int offset = 1;
     int closest_biome_threshold = 1000000;
 
