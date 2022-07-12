@@ -103,7 +103,7 @@ Ref<Biome> BiomeMap::get_biome_by(float temperature, float moisture) {
 
 
 int BiomeMap::get_offset() const {
-    return offest;
+    return offset;
 }
 void BiomeMap::set_offset(int new_offset) {
     offset = new_offset;
