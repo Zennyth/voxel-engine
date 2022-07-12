@@ -260,20 +260,13 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 
 				h += normalized_height_map * height * weighted_biome.weight;
             }
-
 			h -= origin.y;
+
 			int ih = int(h) >> lod;
 			
 			if (water_level > origin.y) {
-				int start_relative_height = 0;
-				if(ih < water_level - origin.y) {
-					start_relative_height = ih;
-				}
-
-				int fill_level = bs.y;
-				if(origin.y + bs.y > water_level) {
-					fill_level = water_level - origin.y - 1;
-				}
+				const int start_relative_height   = ih < water_level - origin.y     ? ih                         : 0;
+				const int fill_level              = origin.y + bs.y > water_level   ? water_level - origin.y - 1 : bs.y;
 
 				out_buffer.fill_area(
                     water, 
@@ -283,13 +276,23 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 			}
 
 			if (ih > 0) {
-                ih = math::min(ih, bs.y);
+                const int surface_threshold     = current_biome->biome_instance->biome->get_surface_threshold();
+                const int fill_height           = math::min(ih, bs.y);
+                const int surface_fill          = ih <= bs.y ? surface_threshold : 0;
 
 				out_buffer.fill_area(
-                    current_biome->biome_instance->biome->get_color_at(continentalness), 
-                    Vector3i(x, 0, z), Vector3i(x + 1, ih, z + 1), 
+                    current_biome->biome_instance->biome->get_surface_color_at(continentalness), 
+                    Vector3i(x, 0, z), Vector3i(x + 1, fill_height - surface_fill, z + 1), 
                     channel
                 );
+
+                if(surface_fill > 0) {
+                    out_buffer.fill_area(
+                        current_biome->biome_instance->biome->get_underground_color_at(continentalness), 
+                        Vector3i(x, fill_height - surface_fill + 1, z), Vector3i(x + 1, fill_height, z + 1), 
+                        channel
+                    );
+                }
 			}
 		} // for x
 	} // for z
