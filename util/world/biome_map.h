@@ -43,9 +43,15 @@ public:
 	BiomeMap();
     ~BiomeMap();
 
+    int get_offset() const;
+    void set_offset(int new_offset);
+    int get_closest_biome_threshold() const;
+    void set_closest_biome_threshold(int new_closest_biome_threshold);
+    int get_scale() const;
+    void set_scale(int new_scale);
+
     void set_temperature_noise(Ref<FastNoiseLite> _temperature_noise);
 	void set_moisture_noise(Ref<FastNoiseLite> _moisture_noise);
-	void set_offset(int _offset);
     void set_biomes(HashMap<Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> _biomes);
 
     List<WeightedBiomeInstance> get_closest_biomes(Vector2 location);
@@ -54,6 +60,7 @@ private:
     Ref<FastNoiseLite> temperature_noise;
 	Ref<FastNoiseLite> moisture_noise;
 	HashMap <Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> biomes;
+
     int offset = 1;
     int closest_biome_threshold = 1000000;
 	int scale = 1000;

@@ -35,6 +35,13 @@ public:
     int get_offset() const;
     void set_offset(int new_offset);
 
+    int get_map_offset() const;
+    void set_map_offset(int new_offset);
+    int get_closest_biome_threshold() const;
+    void set_closest_biome_threshold(int new_closest_biome_threshold);
+    int get_scale() const;
+    void set_scale(int new_scale);
+
 	void set_temperature_noise(Ref<FastNoiseLite> temperature_noise);
 	Ref<FastNoiseLite> get_temperature_noise() const;
 	void set_moisture_noise(Ref<FastNoiseLite> moisture_noise);

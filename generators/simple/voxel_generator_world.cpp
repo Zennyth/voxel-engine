@@ -313,12 +313,23 @@ void VoxelGeneratorWorld::_bind_methods() {
 						 FastNoiseLite::get_class_static(),
 						 PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_EDITOR_INSTANTIATE_OBJECT),
 			"set_temperature_noise", "get_temperature_noise");
+    
 	ClassDB::bind_method(D_METHOD("set_moisture_noise", "moisture_noise"), &VoxelGeneratorWorld::set_moisture_noise);
 	ClassDB::bind_method(D_METHOD("get_moisture_noise"), &VoxelGeneratorWorld::get_moisture_noise);
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "moisture_noise", PROPERTY_HINT_RESOURCE_TYPE,
 						 FastNoiseLite::get_class_static(),
 						 PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_EDITOR_INSTANTIATE_OBJECT),
 			"set_moisture_noise", "get_moisture_noise");
+    
+    ClassDB::bind_method(D_METHOD("set_map_offset", "new_offset"), &VoxelGeneratorWorld::set_map_offset);
+	ClassDB::bind_method(D_METHOD("get_map_offset"), &VoxelGeneratorWorld::get_map_offset);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "map_offset", PROPERTY_HINT_RANGE, String("{0},{1},1").format(varray(MIN_OFFSET, MAX_OFFEST))), "set_map_offset", "get_map_offset");
+    ClassDB::bind_method(D_METHOD("set_closest_biome_threshold", "new_closest_biome_threshold"), &VoxelGeneratorWorld::set_closest_biome_threshold);
+	ClassDB::bind_method(D_METHOD("get_closest_biome_threshold"), &VoxelGeneratorWorld::get_closest_biome_threshold);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "closest_biome_threshold", PROPERTY_HINT_RANGE, String("{0},{1},1").format(varray(0, 10000000))), "set_closest_biome_threshold", "get_closest_biome_threshold");
+    ClassDB::bind_method(D_METHOD("set_scale", "new_scale"), &VoxelGeneratorWorld::set_scale);
+	ClassDB::bind_method(D_METHOD("get_scale"), &VoxelGeneratorWorld::get_scale);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "scale", PROPERTY_HINT_RANGE, String("{0},{1},1").format(varray(1, 100000))), "set_scale", "get_scale");
 
 
 	ADD_GROUP("Terrain", "");
@@ -363,19 +374,36 @@ int VoxelGeneratorWorld::get_height() const {
 void VoxelGeneratorWorld::set_height(int new_height) {
 	height = math::clamp(new_height, MIN_HEIGHT, MAX_HEIGHT);
 }
-
 int VoxelGeneratorWorld::get_water_level() const {
 	return water_level;
 }
 void VoxelGeneratorWorld::set_water_level(int new_water_level) {
 	water_level = math::clamp(new_water_level, MIN_WATER_LEVEL, MAX_WATER_LEVEL);
 }
-
 int VoxelGeneratorWorld::get_offset() const {
 	return offset;
 }
 void VoxelGeneratorWorld::set_offset(int new_offset) {
 	offset = math::clamp(new_offset, MIN_OFFSET, MAX_OFFEST);
+}
+
+int VoxelGeneratorWorld::get_map_offset() const {
+    return biome_map.get_offset();
+}
+void VoxelGeneratorWorld::set_map_offset(int new_offset) {
+    biome_map.set_offset(new_offset);
+}
+int VoxelGeneratorWorld::get_closest_biome_threshold() const {
+    return biome_map.get_closest_biome_threshold();
+}
+void VoxelGeneratorWorld::set_closest_biome_threshold(int new_closest_biome_threshold) {
+    closest_biome_threshold = new_closest_biome_threshold;
+}
+int VoxelGeneratorWorld::get_scale() const {
+    return biome_map.get_scale();
+}
+void VoxelGeneratorWorld::set_scale(int new_scale) {
+    biome_map.set_scale(new_scale)
 }
 
 } // namespace zylann::voxel

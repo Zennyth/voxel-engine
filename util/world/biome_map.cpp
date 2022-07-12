@@ -13,9 +13,6 @@ void BiomeMap::set_temperature_noise(Ref<FastNoiseLite> _temperature_noise) {
 void BiomeMap::set_moisture_noise(Ref<FastNoiseLite> _moisture_noise) {
     moisture_noise = _moisture_noise;
 }
-void BiomeMap::set_offset(int _offset) {
-    offset = _offset;
-}
 void BiomeMap::set_biomes(HashMap<Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> _biomes) {
 	biomes = _biomes;
 }
@@ -102,5 +99,25 @@ Ref<Biome> BiomeMap::get_biome_by(float temperature, float moisture) {
 	Biome::Humidity humidity_category = (Biome::Humidity)floor(moisture * Biome::HUMIDITY_COUNT);
 
 	return biomes[humidity_category][temperature_category][0];
+}
+
+
+int BiomeMap::get_offset() const {
+    return offest;
+}
+void BiomeMap::set_offset(int new_offset) {
+    offset = new_offset;
+}
+int BiomeMap::get_closest_biome_threshold() const {
+    return closest_biome_threshold;
+}
+void BiomeMap::set_closest_biome_threshold(int new_closest_biome_threshold) {
+    closest_biome_threshold = new_closest_biome_threshold;
+}
+int BiomeMap::get_scale() const {
+    return scale;
+}
+void BiomeMap::set_scale(int new_scale) {
+    scale = new_scale;
 }
 } //namespace zylann
