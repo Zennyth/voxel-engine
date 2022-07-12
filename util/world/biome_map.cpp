@@ -86,6 +86,7 @@ void BiomeMap::generate_biomes(Vector2 index) {
 	int min_y = index.y * scale;
 	int max_y = (index.y + 1) * scale - 1;
 
+
 	int x = temperature * (max_x - min_x + 1) + min_x;
 	int y = moisture * (max_y - min_y + 1) + min_y;
 
@@ -97,6 +98,8 @@ void BiomeMap::generate_biomes(Vector2 index) {
 Ref<Biome> BiomeMap::get_biome_by(float temperature, float moisture) {
 	Biome::Temperature temperature_category = (Biome::Temperature)floor(temperature * Biome::TEMPERATURE_COUNT);
 	Biome::Humidity humidity_category = (Biome::Humidity)floor(moisture * Biome::HUMIDITY_COUNT);
+
+	print_line("[BiomeMap] humidity: %i, temperature: %i", humidity_category, temperature_category);
 
 	return biomes[humidity_category][temperature_category][0];
 }

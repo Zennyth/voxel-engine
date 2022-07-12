@@ -36,6 +36,7 @@ void VoxelGeneratorWorld::set_temperature_noise(Ref<FastNoiseLite> temperature_n
 	// The OpenSimplexNoise resource is not thread-safe so we make a copy of it for use in threads
 	RWLockWrite wlock(_parameters_lock);
 	_parameters.temperature_noise = copy;
+	biome_map.set_temperature_noise(copy);
 }
 void VoxelGeneratorWorld::_on_temperature_noise_changed() {
 	ERR_FAIL_COND(_temperature_noise.is_null());
@@ -66,6 +67,7 @@ void VoxelGeneratorWorld::set_moisture_noise(Ref<FastNoiseLite> moisture_noise) 
 	// The OpenSimplexNoise resource is not thread-safe so we make a copy of it for use in threads
 	RWLockWrite wlock(_parameters_lock);
 	_parameters.moisture_noise = copy;
+	biome_map.set_moisture_noise(copy);
 }
 void VoxelGeneratorWorld::_on_moisture_noise_changed() {
 	ERR_FAIL_COND(_moisture_noise.is_null());
@@ -165,12 +167,15 @@ Ref<FastNoiseLite> VoxelGeneratorWorld::get_erosion_noise() const {
 }
 
 void VoxelGeneratorWorld::set_biomes(Array biomes) {
-    print_line("Biomes changed");
 	_biomes = biomes;
     ordered_biomes = {};
 
     for (int i = 0; i < _biomes.size(); ++i) {
 		Ref<Biome> biome{ Object::cast_to<Biome>(_biomes[i]) };
+
+		if (biome == nullptr) {
+			break;
+		}
 
 		Biome::Humidity humidity = biome->get_humidity();
 		Biome::Temperature temperature = biome->get_temperature();
@@ -183,6 +188,7 @@ void VoxelGeneratorWorld::set_biomes(Array biomes) {
             ordered_biomes[humidity][temperature] = {};
         }
 
+		print_line("[SET BIOMES] humidity: %i, temperature: %i", humidity, temperature);
         ordered_biomes[humidity][temperature].push_back(biome);
     }
 
@@ -220,6 +226,8 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 	const float margin = 1 << input.lod;
 	const int lod = input.lod;
 
+	print_line("================= DEBUG STARTED =================");
+
 	if (origin.y > height + margin) {
 		// The bottom of the block is above the highest ground can go (default is air)
 		result.max_lod_hint = true;
@@ -246,20 +254,33 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 			float erosion = normalize_noise_2d(params.erosion_noise, gx, gz, offset);
 
             List<WeightedBiomeInstance> weighted_biomes = biome_map.get_closest_biomes(Vector2(gx, gz));
+			print_line("================= DEBUG AFTER WEIGHTED_BIOMES =================");
+			print_line(weighted_biomes.size());
             WeightedBiomeInstance *current_biome = nullptr;
 
             float h = 0;
             for (WeightedBiomeInstance &weighted_biome : weighted_biomes) {
+				print_line("================= DEBUG NORMALIZED HEIGHT MAP =================");
+
+
+				print_line("biome_instance: ", weighted_biome.biome_instance != nullptr);
+				print_line("biome: ", weighted_biome.biome_instance->biome != nullptr);
+				print_line("continentalness: ", weighted_biome.biome_instance->biome->get_continentalness() != nullptr);
+
                 float normalized_height_map = 
                     weighted_biome.biome_instance->biome->get_continentalness()->get_height_at(continentalness) +
 					weighted_biome.biome_instance->biome->get_peaks_and_valleys()->get_height_at(peaks_and_valleys) +
 					weighted_biome.biome_instance->biome->get_erosion()->get_height_at(erosion);
+
+				print_line("================= DEBUG AFTER NORMALIZED HEIGHT MAP =================");
                 
                 if(current_biome == nullptr || current_biome->weight < weighted_biome.weight)
                     current_biome = &weighted_biome;
 
 				h += normalized_height_map * height * weighted_biome.weight;
             }
+
+			print_line("================= DEBUG FILLING =================");
 
 			h -= origin.y;
 			int ih = int(h) >> lod;
