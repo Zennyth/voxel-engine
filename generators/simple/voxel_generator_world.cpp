@@ -397,13 +397,13 @@ int VoxelGeneratorWorld::get_closest_biome_threshold() const {
     return biome_map.get_closest_biome_threshold();
 }
 void VoxelGeneratorWorld::set_closest_biome_threshold(int new_closest_biome_threshold) {
-    closest_biome_threshold = new_closest_biome_threshold;
+    biome_map.set_closest_biome_threshold(new_closest_biome_threshold);
 }
 int VoxelGeneratorWorld::get_scale() const {
     return biome_map.get_scale();
 }
 void VoxelGeneratorWorld::set_scale(int new_scale) {
-    biome_map.set_scale(new_scale)
+    biome_map.set_scale(new_scale);
 }
 
 } // namespace zylann::voxel
