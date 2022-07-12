@@ -3,7 +3,7 @@
 
 #include <core/io/resource.h>
 #include <scene/resources/gradient.h>
-#include "height_map.h"
+#include "height_filter.h"
 
 namespace zylann {
 
@@ -36,12 +36,12 @@ public:
 
 	uint16_t get_color_at(float offset);
 
-	void set_continentalness(Ref<HeightMap> continentalness);
-	Ref<HeightMap> get_continentalness() const;
-	void set_erosion(Ref<HeightMap> erosion);
-	Ref<HeightMap> get_erosion() const;
-	void set_peaks_and_valleys(Ref<HeightMap> peaks_and_valleys);
-	Ref<HeightMap> get_peaks_and_valleys() const;
+	void set_continentalness(Ref<HeightFilter> continentalness);
+	Ref<HeightFilter> get_continentalness() const;
+	void set_erosion(Ref<HeightFilter> erosion);
+	Ref<HeightFilter> get_erosion() const;
+	void set_peaks_and_valleys(Ref<HeightFilter> peaks_and_valleys);
+	Ref<HeightFilter> get_peaks_and_valleys() const;
 
 	void set_gradient(Ref<Gradient> gradient);
 	Ref<Gradient> get_gradient() const;
@@ -56,17 +56,17 @@ private:
     Humidity humidity = HUMIDITY_HUMID;
 	Temperature temperature = TEMPERATURE_FREEZING;
 
-	Ref<HeightMap> _continentalness;
-	Ref<HeightMap> _erosion;
-	Ref<HeightMap> _peaks_and_valleys;
+	Ref<HeightFilter> _continentalness;
+	Ref<HeightFilter> _erosion;
+	Ref<HeightFilter> _peaks_and_valleys;
 	Ref<Gradient> _gradient;
 
 	String _biome_name = "";
 
     struct Parameters {
-		Ref<HeightMap> continentalness;
-		Ref<HeightMap> erosion;
-		Ref<HeightMap> peaks_and_valleys;
+		Ref<HeightFilter> continentalness;
+		Ref<HeightFilter> erosion;
+		Ref<HeightFilter> peaks_and_valleys;
 		Ref<Gradient> gradient;
 	};
 

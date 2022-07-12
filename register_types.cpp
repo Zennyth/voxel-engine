@@ -45,7 +45,7 @@
 #include "util/string_funcs.h"
 #include "util/tasks/godot/threaded_task_gd.h"
 #include "util/world/biome.h"
-#include "util/world/height_map.h"
+#include "util/world/height_filter.h"
 #include "util/world/border.h"
 #include "util/world/biome_map.h"
 
@@ -208,7 +208,7 @@ void initialize_voxel_module(ModuleInitializationLevel p_level) {
 
 		// Customs
 		ClassDB::register_class<Biome>();
-		ClassDB::register_class<HeightMap>();
+		ClassDB::register_class<HeightFilter>();
 		ClassDB::register_class<VoxelGeneratorWorld>();
 #ifdef VOXEL_ENABLE_FAST_NOISE_2
 		ClassDB::register_class<FastNoise2>();

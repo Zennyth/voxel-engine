@@ -1,6 +1,6 @@
 #include "biome.h"
 
-#include "height_map.h"
+#include "height_filter.h"
 #include <modules/voxel/util/math/color8.h>
 
 namespace zylann {
@@ -11,28 +11,28 @@ uint16_t Biome::get_color_at(float offset) {
 	return Color8((*_gradient)->get_color_at_offset(offset)).to_u16();
 }
 
-void Biome::set_continentalness(Ref<HeightMap> continentalness) {
+void Biome::set_continentalness(Ref<HeightFilter> continentalness) {
 	_continentalness = continentalness;
 	RWLockWrite wlock(_parameters_lock);
 	_parameters.continentalness = continentalness;
 }
-Ref<HeightMap> Biome::get_continentalness() const {
+Ref<HeightFilter> Biome::get_continentalness() const {
 	return _continentalness;
 }
-void Biome::set_erosion(Ref<HeightMap> erosion) {
+void Biome::set_erosion(Ref<HeightFilter> erosion) {
 	_erosion = erosion;
 	RWLockWrite wlock(_parameters_lock);
 	_parameters.erosion = erosion;
 }
-Ref<HeightMap> Biome::get_erosion() const {
+Ref<HeightFilter> Biome::get_erosion() const {
 	return _erosion;
 }
-void Biome::set_peaks_and_valleys(Ref<HeightMap> peaks_and_valleys) {
+void Biome::set_peaks_and_valleys(Ref<HeightFilter> peaks_and_valleys) {
 	_peaks_and_valleys = peaks_and_valleys;
 	RWLockWrite wlock(_parameters_lock);
 	_parameters.peaks_and_valleys = peaks_and_valleys;
 }
-Ref<HeightMap> Biome::get_peaks_and_valleys() const {
+Ref<HeightFilter> Biome::get_peaks_and_valleys() const {
 	return _peaks_and_valleys;
 }
 
@@ -83,9 +83,9 @@ void Biome::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_peaks_and_valleys", "peaks_and_valleys"), &Biome::set_peaks_and_valleys);
 	ClassDB::bind_method(D_METHOD("get_peaks_and_valleys"), &Biome::get_peaks_and_valleys);
 
-	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "continentalness", PROPERTY_HINT_RESOURCE_TYPE, HeightMap::get_class_static()), "set_continentalness", "get_continentalness");
-	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "erosion", PROPERTY_HINT_RESOURCE_TYPE, HeightMap::get_class_static()), "set_erosion", "get_erosion");
-	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "peaks_and_valleys", PROPERTY_HINT_RESOURCE_TYPE, HeightMap::get_class_static()), "set_peaks_and_valleys", "get_peaks_and_valleys");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "continentalness", PROPERTY_HINT_RESOURCE_TYPE, HeightFilter::get_class_static()), "set_continentalness", "get_continentalness");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "erosion", PROPERTY_HINT_RESOURCE_TYPE, HeightFilter::get_class_static()), "set_erosion", "get_erosion");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "peaks_and_valleys", PROPERTY_HINT_RESOURCE_TYPE, HeightFilter::get_class_static()), "set_peaks_and_valleys", "get_peaks_and_valleys");
 
 
 	ADD_GROUP("Colors", "");
