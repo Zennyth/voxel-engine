@@ -165,6 +165,7 @@ Ref<FastNoiseLite> VoxelGeneratorWorld::get_erosion_noise() const {
 }
 
 void VoxelGeneratorWorld::set_biomes(Array biomes) {
+    print_line("Biomes changed");
 	_biomes = biomes;
     ordered_biomes = {};
 
@@ -301,7 +302,8 @@ void VoxelGeneratorWorld::_bind_methods() {
     ADD_GROUP("Biomes", "");
 	ClassDB::bind_method(D_METHOD("set_biomes", "biomes"), &VoxelGeneratorWorld::set_biomes);
 	ClassDB::bind_method(D_METHOD("get_biomes"), &VoxelGeneratorWorld::get_biomes);
-	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "biomes", PROPERTY_HINT_ARRAY_TYPE, "RESOURCE"), "set_biomes", "get_biomes");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "biomes", PROPERTY_HINT_TYPE_STRING, "17/17:Biome"), "set_biomes", "get_biomes");
+
 
 
 	ADD_GROUP("Biome Map", "");
