@@ -9,7 +9,7 @@ HeightMap::HeightMap() {
 }
 
 real_t HeightMap::get_height_at(real_t noise) {
-	return _curve.ptr()->interpolate_baked(noise) * _weight;
+	return _curve->interpolate_baked(noise) * _weight;
 }
 
 
