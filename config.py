@@ -77,7 +77,7 @@ def get_doc_classes():
         "FastNoise2",
 
         "Biome",
-        "HeightMap",
+        "HeightFilter",
 
         "VoxelMesher",
         "VoxelMesherBlocky",

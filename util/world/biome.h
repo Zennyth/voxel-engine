@@ -3,7 +3,7 @@
 
 #include <core/io/resource.h>
 #include <scene/resources/gradient.h>
-#include "height_map.h"
+#include "height_filter.h"
 
 namespace zylann {
 
@@ -34,12 +34,12 @@ public:
     Temperature get_temperature() const;
 	void set_temperature(Temperature _temperature);
 
-	void set_continentalness(Ref<HeightMap> continentalness);
-	Ref<HeightMap> get_continentalness() const;
-	void set_erosion(Ref<HeightMap> erosion);
-	Ref<HeightMap> get_erosion() const;
-	void set_peaks_and_valleys(Ref<HeightMap> peaks_and_valleys);
-	Ref<HeightMap> get_peaks_and_valleys() const;
+	void set_continentalness(Ref<HeightFilter> continentalness);
+	Ref<HeightFilter> get_continentalness() const;
+	void set_erosion(Ref<HeightFilter> erosion);
+	Ref<HeightFilter> get_erosion() const;
+	void set_peaks_and_valleys(Ref<HeightFilter> peaks_and_valleys);
+	Ref<HeightFilter> get_peaks_and_valleys() const;
 
     int get_surface_threshold() const;
 	void set_surface_threshold(int _surface_threshold);
@@ -62,9 +62,9 @@ private:
     Humidity humidity = HUMIDITY_HUMID;
 	Temperature temperature = TEMPERATURE_FREEZING;
 
-	Ref<HeightMap> _continentalness;
-	Ref<HeightMap> _erosion;
-	Ref<HeightMap> _peaks_and_valleys;
+	Ref<HeightFilter> _continentalness;
+	Ref<HeightFilter> _erosion;
+	Ref<HeightFilter> _peaks_and_valleys;
 
     int surface_threshold = 3;
 	Ref<Gradient> _underground_gradient;
@@ -73,9 +73,9 @@ private:
 	String _biome_name = "";
 
     struct Parameters {
-		Ref<HeightMap> continentalness;
-		Ref<HeightMap> erosion;
-		Ref<HeightMap> peaks_and_valleys;
+		Ref<HeightFilter> continentalness;
+		Ref<HeightFilter> erosion;
+		Ref<HeightFilter> peaks_and_valleys;
 		Ref<Gradient> underground_gradient;
 	    Ref<Gradient> surface_gradient;
 	};

@@ -1,5 +1,5 @@
-#ifndef ZYLANN_HEIGHT_MAP_H
-#define ZYLANN_HEIGHT_MAP_H
+#ifndef ZYLANN_HEIGHT_FILTER_H
+#define ZYLANN_HEIGHT_FILTER_H
 
 #include <core/io/resource.h>
 
@@ -7,11 +7,11 @@ class Curve;
 
 namespace zylann {
 
-class HeightMap : public Resource {
-	GDCLASS(HeightMap, Resource)
+class HeightFilter : public Resource {
+	GDCLASS(HeightFilter, Resource)
 
 public:
-	HeightMap();
+	HeightFilter();
 
 	real_t get_height_at(real_t noise);
 
@@ -39,4 +39,4 @@ private:
 
 } // namespace zylann
 
-#endif // ZYLANN_HEIGHT_MAP_H
+#endif // ZYLANN_HEIGHT_FILTER_H
