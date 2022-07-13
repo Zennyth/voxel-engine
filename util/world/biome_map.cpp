@@ -14,13 +14,13 @@ void BiomeMap::set_moisture_noise(Ref<FastNoiseLite> _moisture_noise) {
     moisture_noise = _moisture_noise;
 }
 void BiomeMap::set_biomes(HashMap<Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> _biomes) {
-    for(Biome::Humidity const& humidity_key: _biomes) {
-        for(Biome::Temperature const& temperature_key: _biomes[humidity_key]) {
+    for(auto const& humidity_key: _biomes) {
+        for(auto const& temperature_key: _biomes[humidity_key.first]) {
             
-            print_line("[BiomeMap::set_biomes] humidity: %i, temperature: %i", humidity_key, temperature_key);
-            print_line(_biomes[humidity_key][temperature_key][0] != nullptr);
-            if(_biomes[humidity_key][temperature_key][0] != nullptr) {
-                print_line(_biomes[humidity_key][temperature_key][0]->get_biome_name());
+            print_line("[BiomeMap::set_biomes] humidity: %i, temperature: %i", humidity_key.first, temperature_key.first);
+            print_line(_biomes[humidity_key.first][temperature_key.first][0] != nullptr);
+            if(_biomes[humidity_key.first][temperature_key.first][0] != nullptr) {
+                print_line(_biomes[humidity_key.first][temperature_key.first][0]->get_biome_name());
             }
         }
     }
