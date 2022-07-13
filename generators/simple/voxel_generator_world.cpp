@@ -226,7 +226,7 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 	const float margin = 1 << input.lod;
 	const int lod = input.lod;
 
-	print_line("================= DEBUG STARTED =================");
+	// print_line("================= DEBUG STARTED =================");
 
 	if (origin.y > height + margin) {
 		// The bottom of the block is above the highest ground can go (default is air)
@@ -254,25 +254,25 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 			float erosion = normalize_noise_2d(params.erosion_noise, gx, gz, offset);
 
             List<WeightedBiomeInstance> weighted_biomes = biome_map.get_closest_biomes(Vector2(gx, gz));
-			print_line("================= DEBUG AFTER WEIGHTED_BIOMES =================");
-			print_line(weighted_biomes.size());
+			// print_line("================= DEBUG AFTER WEIGHTED_BIOMES =================");
+			// print_line(weighted_biomes.size());
             WeightedBiomeInstance *current_biome = nullptr;
 
             float h = 0;
             for (WeightedBiomeInstance &weighted_biome : weighted_biomes) {
-				print_line("================= DEBUG NORMALIZED HEIGHT MAP =================");
+				// print_line("================= DEBUG NORMALIZED HEIGHT MAP =================");
 
 
-				print_line("biome_instance: ", weighted_biome.biome_instance != nullptr);
-				print_line("biome: ", weighted_biome.biome_instance->biome != nullptr);
-				print_line("continentalness: ", weighted_biome.biome_instance->biome->get_continentalness() != nullptr);
+				//print_line("biome_instance: ", weighted_biome.biome_instance != nullptr);
+				//print_line("biome: ", weighted_biome.biome_instance->biome != nullptr);
+				//print_line("continentalness: ", weighted_biome.biome_instance->biome->get_continentalness() != nullptr);
 
                 float normalized_height_map = 
                     weighted_biome.biome_instance->biome->get_continentalness()->get_height_at(continentalness) +
 					weighted_biome.biome_instance->biome->get_peaks_and_valleys()->get_height_at(peaks_and_valleys) +
 					weighted_biome.biome_instance->biome->get_erosion()->get_height_at(erosion);
 
-				print_line("================= DEBUG AFTER NORMALIZED HEIGHT MAP =================");
+				// print_line("================= DEBUG AFTER NORMALIZED HEIGHT MAP =================");
                 
                 if(current_biome == nullptr || current_biome->weight < weighted_biome.weight)
                     current_biome = &weighted_biome;
@@ -280,7 +280,7 @@ VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::Voxel
 				h += normalized_height_map * height * weighted_biome.weight;
             }
 
-			print_line("================= DEBUG FILLING =================");
+			// print_line("================= DEBUG FILLING =================");
 
 			h -= origin.y;
 			int ih = int(h) >> lod;

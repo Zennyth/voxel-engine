@@ -14,17 +14,6 @@ void BiomeMap::set_moisture_noise(Ref<FastNoiseLite> _moisture_noise) {
     moisture_noise = _moisture_noise;
 }
 void BiomeMap::set_biomes(HashMap<Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> _biomes) {
-    for(auto const& humidity_key: _biomes) {
-        for(auto const& temperature_key: _biomes[humidity_key.first]) {
-            
-            print_line("[BiomeMap::set_biomes] humidity: %i, temperature: %i", humidity_key.first, temperature_key.first);
-            print_line(_biomes[humidity_key.first][temperature_key.first][0] != nullptr);
-            if(_biomes[humidity_key.first][temperature_key.first][0] != nullptr) {
-                print_line(_biomes[humidity_key.first][temperature_key.first][0]->get_biome_name());
-            }
-        }
-    }
-
 	biomes = _biomes;
 }
 
@@ -45,8 +34,11 @@ List<WeightedBiomeInstance> BiomeMap::get_closest_biomes(Vector2 location) {
 			generate_biomes(cell_index);
 		}
 
-		List<BiomeInstance> biome_instances = biome_map_grid[cell_index];
-		for (BiomeInstance &biome_instance : biome_instances) {
+		for (BiomeInstance &biome_instance : biome_map_grid[cell_index]) {
+			//print_line("cell_index: ", cell_index.x, cell_index.y);
+			//print_line("biome: ", biome_instance.biome != nullptr);
+			//print_line("continentalness: ", biome_instance.biome->get_continentalness() != nullptr);
+
 			float distance = get_distance(location, biome_instance.location);
 			float normalized_distance = sqrt(distance);
 
@@ -87,7 +79,6 @@ float BiomeMap::get_distance(Vector2 point_a, Vector2 point_b) {
 }
 
 void BiomeMap::generate_biomes(Vector2 index) {
-	List<BiomeInstance> biome_instances = {};
 
     float temperature = normalize_noise_2d(temperature_noise, index.x, index.y, 1);
     float moisture = normalize_noise_2d(moisture_noise, index.x, index.y, 1);
@@ -101,7 +92,12 @@ void BiomeMap::generate_biomes(Vector2 index) {
 	int x = temperature * (max_x - min_x + 1) + min_x;
 	int y = moisture * (max_y - min_y + 1) + min_y;
 
+	List<BiomeInstance> biome_instances = {};
 	biome_instances.push_back(BiomeInstance(get_biome_by(temperature, moisture), Vector2(x, y)));
+
+	//print_line("biome_instance: ", biome_instances.size() != 0);
+	//print_line("biome: ", biome_instances[0].biome != nullptr);
+	//print_line("continentalness: ", biome_instances[0].biome->get_continentalness() != nullptr);
 
 	biome_map_grid[index] = biome_instances;
 }
@@ -110,7 +106,7 @@ Ref<Biome> BiomeMap::get_biome_by(float temperature, float moisture) {
 	Biome::Temperature temperature_category = (Biome::Temperature)floor(temperature * Biome::TEMPERATURE_COUNT);
 	Biome::Humidity humidity_category = (Biome::Humidity)floor(moisture * Biome::HUMIDITY_COUNT);
 
-	print_line("[BiomeMap] humidity: %i, temperature: %i", humidity_category, temperature_category);
+	// print_line("[BiomeMap] humidity: %i, temperature: %i", humidity_category, temperature_category);
 
 	return biomes[humidity_category][temperature_category][0];
 }
