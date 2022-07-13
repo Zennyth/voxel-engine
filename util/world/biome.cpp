@@ -7,8 +7,15 @@ namespace zylann {
 
 Biome::Biome() {}
 
-uint16_t Biome::get_color_at(float offset) {
-	return Color8((*_gradient)->get_color_at_offset(offset)).to_u16();
+uint16_t Biome::get_color_at(Ref<Gradient> gradient, float offset) {
+	return Color8(gradient->get_color_at_offset(offset)).to_u16();
+}
+
+uint16_t Biome::get_underground_color_at(float offset) {
+    return get_color_at(_underground_gradient, offset);
+}
+uint16_t Biome::get_surface_color_at(float offset) {
+    return get_color_at(_surface_gradient, offset);
 }
 
 void Biome::set_continentalness(Ref<HeightMap> continentalness) {
@@ -36,13 +43,28 @@ Ref<HeightMap> Biome::get_peaks_and_valleys() const {
 	return _peaks_and_valleys;
 }
 
-void Biome::set_gradient(Ref<Gradient> gradient) {
-	_gradient = gradient;
-	RWLockWrite wlock(_parameters_lock);
-	_parameters.gradient = gradient;
+
+int Biome::get_surface_threshold() const {
+    return surface_threshold;
 }
-Ref<Gradient> Biome::get_gradient() const {
-	return _gradient;
+void Biome::set_surface_threshold(int _surface_threshold) {
+    surface_threshold = _surface_threshold;
+}
+void Biome::set_underground_gradient(Ref<Gradient> gradient) {
+    _underground_gradient = gradient;
+	RWLockWrite wlock(_parameters_lock);
+	_parameters.underground_gradient = gradient;
+}
+Ref<Gradient> Biome::get_underground_gradient() const {
+    return _underground_gradient;
+}
+void Biome::set_surface_gradient(Ref<Gradient> gradient) {
+    _surface_gradient = gradient;
+	RWLockWrite wlock(_parameters_lock);
+	_parameters.surface_gradient = gradient;
+}
+Ref<Gradient> Biome::get_surface_gradient() const {
+    return _surface_gradient;
 }
 
 Biome::Humidity Biome::get_humidity() const {
@@ -90,15 +112,20 @@ void Biome::_bind_methods() {
 
 	ADD_GROUP("Colors", "");
 
-	ClassDB::bind_method(D_METHOD("set_gradient", "gradient"), &Biome::set_gradient);
-	ClassDB::bind_method(D_METHOD("get_gradient"), &Biome::get_gradient);
-
-	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "gradient", PROPERTY_HINT_RESOURCE_TYPE, Gradient::get_class_static()), "set_gradient", "get_gradient");
+    ClassDB::bind_method(D_METHOD("set_surface_threshold", "new_surface_threshold"), &Biome::set_surface_threshold);
+	ClassDB::bind_method(D_METHOD("get_surface_threshold"), &Biome::get_surface_threshold);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "surface_threshold", PROPERTY_HINT_RANGE, String("{0},{1},1").format(varray(0, 100))), "set_surface_threshold", "get_surface_threshold");
+	ClassDB::bind_method(D_METHOD("set_surface_gradient", "gradient"), &Biome::set_surface_gradient);
+	ClassDB::bind_method(D_METHOD("get_surface_gradient"), &Biome::get_surface_gradient);
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "surface_gradient", PROPERTY_HINT_RESOURCE_TYPE, Gradient::get_class_static()), "set_surface_gradient", "get_surface_gradient");
+	ClassDB::bind_method(D_METHOD("set_underground_gradient", "gradient"), &Biome::set_underground_gradient);
+	ClassDB::bind_method(D_METHOD("get_underground_gradient"), &Biome::get_underground_gradient);
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "underground_gradient", PROPERTY_HINT_RESOURCE_TYPE, Gradient::get_class_static()), "set_underground_gradient", "get_underground_gradient");
 
 
 	ADD_GROUP("Conditions of appearance", "");
 
- //   BIND_ENUM_CONSTANT(HUMIDITY_STICKY);
+//  BIND_ENUM_CONSTANT(HUMIDITY_STICKY);
 	BIND_ENUM_CONSTANT(HUMIDITY_HUMID);
 //	BIND_ENUM_CONSTANT(HUMIDITY_PLEASANT);
 	BIND_ENUM_CONSTANT(HUMIDITY_DRY);
