@@ -48,6 +48,8 @@
 #include "util/world/height_filter.h"
 #include "util/world/border.h"
 #include "util/world/biome_map.h"
+#include "util/world/voxel_instancer_world.h"
+
 
 #ifdef VOXEL_ENABLE_FAST_NOISE_2
 #include "util/noise/fast_noise_2.h"
@@ -210,6 +212,7 @@ void initialize_voxel_module(ModuleInitializationLevel p_level) {
 		ClassDB::register_class<Biome>();
 		ClassDB::register_class<HeightFilter>();
 		ClassDB::register_class<VoxelGeneratorWorld>();
+		ClassDB::register_class<VoxelInstancerWorld>();
 #ifdef VOXEL_ENABLE_FAST_NOISE_2
 		ClassDB::register_class<FastNoise2>();
 #endif

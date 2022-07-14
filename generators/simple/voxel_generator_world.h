@@ -57,6 +57,11 @@ public:
 	void set_biomes(Array biomes);
 	Array get_biomes() const;
 
+	List<Ref<Biome>> casted_biomes;
+	List<Ref<Biome>> get_casted_biomes();
+
+	BiomeMap biome_map;
+
 	VoxelBufferInternal::ChannelId VoxelGeneratorWorld::get_channel() const;
 
 	Result generate_block(VoxelGenerator::VoxelQueryData &input) override;
@@ -74,8 +79,6 @@ private:
 
 	Array _biomes;
     HashMap<Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> ordered_biomes = {};
-
-	BiomeMap biome_map;
 
     int height = 200;
 	int water_level = 50;

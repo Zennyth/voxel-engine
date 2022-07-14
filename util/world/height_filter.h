@@ -5,7 +5,7 @@
 
 class Curve;
 
-namespace zylann {
+namespace zylann::voxel {
 
 class HeightFilter : public Resource {
 	GDCLASS(HeightFilter, Resource)

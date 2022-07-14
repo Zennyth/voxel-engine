@@ -115,6 +115,8 @@ void VoxelInstancer::_notification(int p_what) {
 				VoxelTerrain *vt = Object::cast_to<VoxelTerrain>(get_parent());
 				if (vt != nullptr) {
 					_parent = vt;
+					init_library();
+
 					_parent_data_block_size_po2 = vt->get_data_block_size_pow2();
 					_parent_mesh_block_size_po2 = vt->get_mesh_block_size_pow2();
 					_mesh_lod_distance = vt->get_max_view_distance();
@@ -537,6 +539,8 @@ void VoxelInstancer::regenerate_layer(uint16_t layer_id, bool regenerate_blocks)
 		const Transform3D block_local_transform(Basis(), Vector3(block.grid_position * lod_block_size));
 		const Transform3D block_transform = parent_transform * block_local_transform;
 
+		// Maybe HERE
+
 		item->get_generator()->generate_transforms(_transform_cache, block.grid_position, block.lod_index, layer_id,
 				surface_arrays, block_local_transform, static_cast<VoxelInstanceGenerator::UpMode>(_up_mode),
 				octant_mask, lod_block_size);
@@ -871,6 +875,10 @@ void VoxelInstancer::update_block_from_transforms(int block_index, Span<const Tr
 
 	// Update multimesh
 	const VoxelInstanceLibraryMultiMeshItem *item = Object::cast_to<VoxelInstanceLibraryMultiMeshItem>(&item_base);
+
+	if (!is_item_spawnable(layer_id, grid_position))
+		return;
+
 	if (item != nullptr) {
 		if (transforms.size() == 0) {
 			if (block.multimesh_instance.is_valid()) {
@@ -1647,6 +1655,12 @@ Node *VoxelInstancer::debug_dump_as_nodes() const {
 	}
 
 	return root;
+}
+
+void VoxelInstancer::init_library() {
+}
+bool VoxelInstancer::is_item_spawnable(int index, Vector3i grid_position) {
+	return true;
 }
 
 #ifdef TOOLS_ENABLED

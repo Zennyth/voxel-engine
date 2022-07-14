@@ -96,6 +96,11 @@ public:
 
 protected:
 	void _notification(int p_what);
+	static void _bind_methods();
+	VoxelNode *_parent = nullptr;
+
+	virtual void init_library();
+	virtual bool is_item_spawnable(int index, Vector3i grid_position);
 
 private:
 	struct Layer;
@@ -148,8 +153,6 @@ private:
 
 	static void remove_floating_scene_instances(Block &block, const Transform3D &parent_transform, Box3i p_voxel_box,
 			const VoxelTool &voxel_tool, int block_size_po2);
-
-	static void _bind_methods();
 
 	// TODO Rename RenderBlock?
 	struct Block {
@@ -219,7 +222,6 @@ private:
 
 	std::vector<Transform3D> _transform_cache;
 
-	VoxelNode *_parent = nullptr;
 	unsigned int _parent_data_block_size_po2 = constants::DEFAULT_BLOCK_SIZE_PO2;
 	unsigned int _parent_mesh_block_size_po2 = constants::DEFAULT_BLOCK_SIZE_PO2;
 	float _mesh_lod_distance = 0.f;

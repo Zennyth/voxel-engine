@@ -6,7 +6,7 @@
 #include <modules/noise/fastnoise_lite.h>
 #include <modules/voxel/util/world/biome.h>
 
-namespace zylann {
+namespace zylann::voxel {
 
 struct BiomeInstance {
   Ref<Biome> biome;
@@ -55,6 +55,7 @@ public:
     void set_biomes(HashMap<Biome::Humidity, HashMap<Biome::Temperature, List<Ref<Biome>>>> _biomes);
 
     List<WeightedBiomeInstance> get_closest_biomes(Vector2 location);
+	Ref<Biome> get_biome_by_position(Vector2 location);
 
 private:
     Ref<FastNoiseLite> temperature_noise;

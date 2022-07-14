@@ -3,7 +3,7 @@
 #include "height_filter.h"
 #include <modules/voxel/util/math/color8.h>
 
-namespace zylann {
+namespace zylann::voxel {
 
 Biome::Biome() {}
 
@@ -89,6 +89,18 @@ void Biome::set_biome_name(String biome_name) {
 	_biome_name = biome_name;
 }
 
+void Biome::set_library(Ref<VoxelInstanceLibrary> library) {
+	if (library == _library) {
+		return;
+	}
+
+	_library = library;
+}
+Ref<VoxelInstanceLibrary> Biome::get_library() const {
+	return _library;
+}
+
+
 void Biome::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_biome_name", "set_biome_name"), &Biome::set_biome_name);
@@ -96,7 +108,15 @@ void Biome::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "biome_name"), "set_biome_name", "get_biome_name");
 
 
-	ADD_GROUP("Height maps", "");
+	ADD_GROUP("Spawnable objects", "");
+
+	ClassDB::bind_method(D_METHOD("set_library", "library"), &Biome::set_library);
+	ClassDB::bind_method(D_METHOD("get_library"), &Biome::get_library);
+
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "library", PROPERTY_HINT_RESOURCE_TYPE, VoxelInstanceLibrary::get_class_static()), "set_library", "get_library");
+
+
+	ADD_GROUP("Height filters", "");
 
     ClassDB::bind_method(D_METHOD("set_continentalness", "continentalness"), &Biome::set_continentalness);
 	ClassDB::bind_method(D_METHOD("get_continentalness"), &Biome::get_continentalness);

@@ -3,7 +3,7 @@
 #include <scene/resources/curve.h>
 #include <core/core_string_names.h>
 
-namespace zylann {
+namespace zylann::voxel {
 
 HeightFilter::HeightFilter() {
 }

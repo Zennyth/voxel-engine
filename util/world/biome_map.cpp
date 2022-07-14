@@ -1,7 +1,7 @@
 #include "biome_map.h"
 #include "core/math/math_funcs.h"
 
-namespace zylann {
+namespace zylann::voxel {
 BiomeMap::BiomeMap() {
 }
 BiomeMap::~BiomeMap() {}
@@ -19,6 +19,16 @@ void BiomeMap::set_biomes(HashMap<Biome::Humidity, HashMap<Biome::Temperature, L
 
 float BiomeMap::normalize_noise_2d(Ref<FastNoiseLite> noise, int x, int y, int offest) {
     return 0.5 + 0.5 * noise->get_noise_2d(x / offest, y / offest);
+}
+
+Ref<Biome> BiomeMap::get_biome_by_position(Vector2 location) {
+	Vector2 index = get_grid_index(location);
+
+	if (!biome_map_grid.has(index)) {
+		generate_biomes(index);
+	}
+	// TODO: fix that later
+    return biome_map_grid[index][0].biome;
 }
 
 List<WeightedBiomeInstance> BiomeMap::get_closest_biomes(Vector2 location) {

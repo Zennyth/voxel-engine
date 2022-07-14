@@ -3,9 +3,11 @@
 
 #include <core/io/resource.h>
 #include <scene/resources/gradient.h>
+#include "../../terrain/instancing/voxel_instance_library.h"
 #include "height_filter.h"
 
-namespace zylann {
+
+namespace zylann::voxel {
 
 class Biome : public Resource {
 	GDCLASS(Biome, Resource)
@@ -55,6 +57,9 @@ public:
     uint16_t get_underground_color_at(float offset);
     uint16_t get_surface_color_at(float offset);
 
+	void set_library(Ref<VoxelInstanceLibrary> library);
+	Ref<VoxelInstanceLibrary> get_library() const;
+
 private:
 	static void _bind_methods();
     uint16_t get_color_at(Ref<Gradient> gradient, float offset);
@@ -72,6 +77,8 @@ private:
 
 	String _biome_name = "";
 
+	Ref<VoxelInstanceLibrary> _library;
+
     struct Parameters {
 		Ref<HeightFilter> continentalness;
 		Ref<HeightFilter> erosion;
@@ -86,7 +93,7 @@ private:
 
 } // namespace zylann
 
-VARIANT_ENUM_CAST(zylann::Biome::Humidity);
-VARIANT_ENUM_CAST(zylann::Biome::Temperature);
+VARIANT_ENUM_CAST(zylann::voxel::Biome::Humidity);
+VARIANT_ENUM_CAST(zylann::voxel::Biome::Temperature);
 
 #endif // ZYLANN_BIOME_H

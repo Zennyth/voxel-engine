@@ -169,6 +169,7 @@ Ref<FastNoiseLite> VoxelGeneratorWorld::get_erosion_noise() const {
 void VoxelGeneratorWorld::set_biomes(Array biomes) {
 	_biomes = biomes;
     ordered_biomes = {};
+	casted_biomes = {};
 
     for (int i = 0; i < _biomes.size(); ++i) {
 		Ref<Biome> biome{ Object::cast_to<Biome>(_biomes[i]) };
@@ -188,8 +189,8 @@ void VoxelGeneratorWorld::set_biomes(Array biomes) {
             ordered_biomes[humidity][temperature] = {};
         }
 
-		print_line("[SET BIOMES] humidity: %i, temperature: %i", humidity, temperature);
         ordered_biomes[humidity][temperature].push_back(biome);
+		casted_biomes.push_back(biome);
     }
 
     biome_map.set_biomes(ordered_biomes);
@@ -197,6 +198,10 @@ void VoxelGeneratorWorld::set_biomes(Array biomes) {
 }
 Array VoxelGeneratorWorld::get_biomes() const {
 	return _biomes;
+}
+
+List<Ref<Biome>> VoxelGeneratorWorld::get_casted_biomes() {
+	return casted_biomes;
 }
 
 VoxelGenerator::Result VoxelGeneratorWorld::generate_block(VoxelGenerator::VoxelQueryData &input) {
