@@ -332,7 +332,7 @@ void VoxelGeneratorWorld::_bind_methods() {
     ADD_GROUP("Biomes", "");
 	ClassDB::bind_method(D_METHOD("set_biomes", "biomes"), &VoxelGeneratorWorld::set_biomes);
 	ClassDB::bind_method(D_METHOD("get_biomes"), &VoxelGeneratorWorld::get_biomes);
-	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "biomes", PROPERTY_HINT_TYPE_STRING, "17/17:Biome"), "set_biomes", "get_biomes");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "biomes", PROPERTY_HINT_ARRAY_TYPE, vformat("%s/%s:%s", Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "Biome")), "set_biomes", "get_biomes");
 
 
 
